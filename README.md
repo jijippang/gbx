@@ -6,9 +6,9 @@ Emulator for the Game Boy family
 
 
 ## Supported Console Models
-[] Game Boy
-[] Game Boy Color
-[] Game Boy Advance
+- [ ] Game Boy
+- [ ] Game Boy Color
+- [ ] Game Boy Advance
 
 
 ## Acknowledgements
