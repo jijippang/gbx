@@ -1,4 +1,5 @@
 
+use std::path::Path;
 use crate::consoles::Console;
 use gb_cpu::GbCpu;
 use gb_mmu::GbMmu;
@@ -28,12 +29,12 @@ impl Console for GameBoy
 
     }
 
-    fn read(&self, address: u32) -> u8
+    fn read_memory(&self, addr: u32) -> u8
     {
         0
     }
 
-    fn write(&mut self, adddress: u32, value: u8)
+    fn write_memory(&mut self, addr: u32, val: u8)
     {
 
     }
@@ -41,6 +42,11 @@ impl Console for GameBoy
     fn get_video_buffer(&self) -> &[u8]
     {
         &[0]
+    }
+
+    fn read_rom(&mut self, file_path: &Path)
+    {
+
     }
 }
 

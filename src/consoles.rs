@@ -1,4 +1,5 @@
 
+use std::path::Path;
 use clap::ValueEnum;
 
 pub mod gameboy;
@@ -17,8 +18,9 @@ pub enum ConsoleModel
 pub trait Console
 {
     fn step(&mut self, cycles: usize);
-    fn read(&self, address: u32) -> u8;
-    fn write(&mut self, adddress: u32, value: u8);
+    fn read_memory(&self, addr: u32) -> u8;
+    fn write_memory(&mut self, addr: u32, val: u8);
     fn get_video_buffer(&self) -> &[u8];
+    fn read_rom(&mut self, file_path: &Path);
 }
 

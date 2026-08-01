@@ -48,6 +48,7 @@ fn main()
         // ConsoleModel::GameBoyAdvance => GameBoyAdvance::default(),
         _ => panic!("Console Model: {:?}, is not yet supported", args.console_model),
     };
+
     let emulator = Emulator::new(console);
     println!("{:?}", emulator);
 }
