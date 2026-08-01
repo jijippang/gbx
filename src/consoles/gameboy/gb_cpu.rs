@@ -160,9 +160,53 @@ enum Instruction
 
 
     // --- 8-BIT LOAD INSTRUCTIONS END ---
-    
+
 
     // --- 16-BIT LOAD INSTRUCTIONS BEGIN ---
+
+
+    // LD rr, nn: Load 16-bit register / register pair
+    // Description: Load to the 16-bit register rr, the immediate 16-bit data nn
+    // Opcode: 0b00xx0001/various
+    // Length: 3 bytes: opcode + LSB(nn) + MSB(nn)
+    LdR16FromImm16 { dst: R16, imm: u16 },
+
+
+    // LD nn, SP: Load from stack pointer (direct)
+    // Description: Load to the absolute address specified by the 16-bit operand nn, data from the 16-bit SP register
+    // Opcode: 0b00001000/0x08
+    // Length: 3 bytes: opcode + LSB(nn) + MSB(nn)
+    LdImm16FromSp { imm: u16 },
+
+
+    // LD SP, HL: Load stack pointer from HL
+    // Description: Load to the 16-bit SP register, data from the 16-bit HL register
+    // Opcode: 0b11111001/0xF9
+    // Length: 1 byte: opcode
+    LdSpFromHl,
+
+
+    // PUSH rr: Push to stack
+    // Description: Push to stack memory, data from the 16-bit register rr
+    // Opcode: 0b11xx0101/various
+    // Length: 1 byte: opcode
+    PushR16 { src: R16 },
+
+
+    // POP rr: Pop from stack
+    // Description: Pops to the 16-bit register rr, data from the stack memory
+    // Opcode: 0b11xx0001/various
+    // Length: 1 byte: opcode
+    PopR16 { dst: R16 },
+
+
+    // LD HL, SP + e: Load HL from adjusted stack pointer
+    // Description: Load to the HL register, 16-bit data calculated by adding the signed 8-bit operand e to the 16-bit value of the SP register
+    // Opcode: 0b11111000/0xF8
+    // Length: 2 bytes: opcode + e
+    LdHlFromAdjSp { imm: i8 },
+
+
     // --- 16-BIT LOAD INSTRUCTIONS END ---
 
 
