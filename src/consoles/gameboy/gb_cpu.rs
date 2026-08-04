@@ -211,6 +211,245 @@ enum Instruction
 
 
     // --- 8-BIT ARITHMETIC AND LOGICAL INSTRUCTIONS BEGIN ---
+
+
+    // ADD r: Add (register)
+    // Description: Adds to the 8-bit A register, the 8-bit register r, and stores the result back into the A register
+    // Opcode: 0b10000xxx/various
+    // Length: 1 byte: opcode
+    AddR8ToA { src: R8 },
+
+
+    // ADD HL: Add (indirect HL)
+    // Description: Adds to the 8-bit A register, data from the absolute address specified by the 16-bit register HL, and stores the result back into the A register
+    // Opcode: 0b10000110/0x86
+    // Length: 1 byte: opcode
+    AddHlToA,
+
+
+    // ADD n: Add (immediate)
+    // Description: Adds to the 8-bit A register, the immediate data n, and stores the result back into the A register
+    // Opcode: 0b11000110/0xC6
+    // Length: 2 bytes: opcode + n
+    AddImm8ToA { imm: u8 },
+
+
+    // ADC r: Add with carry (register)
+    // Description: Adds to the 8-bit A register, the carry flag and the 8-bit register r, and stores the result back into the A register
+    // Opcode: 0b10001xxx/various
+    // Length: 1 byte: opcode
+    AdcR8ToA { src: R8 },
+
+
+    // ADC HL: Add with carry (indirect HL)
+    // Description: Adds to the 8-bit A register, the carry flag and data from the absolute address specified by the 16-bit register HL, and stores the result back into the A register
+    // Opcode: 0b10001110/0x8E
+    // Length: 1 byte: opcode
+    AdcHlToA,
+
+
+    // ADC n: Add with carry (immediate)
+    // Description: Adds to the 8-bit A register, the carry flag and the immediate data n, and stores the result back into the A register
+    // Opcode: 0b11001110/0xCE
+    // Length: 2 bytes: opcode + n
+    AdcImm8ToA { imm: u8 },
+
+
+    // SUB r: Subtract (register)
+    // Description: Subtracts from the 8-bit A register, the 8-bit register r, and stores the result back into the A register
+    // Opcode: 0b10010xxx/various
+    // Length: 1 byte: opcode
+    SubR8FromA { src: R8 },
+
+
+    // SUB HL: Subtract (indirect HL)
+    // Description: Subtracts from the 8-bit A register, data from the absolute address specified by the 16-bit register HL, and stores the result back into the A register
+    // Opcode: 0b10010110/0x96
+    // Length: 1 byte: opcode
+    SubHlFromA,
+
+
+    // SUB n: Subtract (immediate)
+    // Description: Subtracts from the 8-bit A register, the immediate data n, and stores the result back into the A register
+    // Opcode: 0b11010110/0xD6
+    // Length: 2 bytes: opcode + n
+    SubImm8FromA { imm: u8 },
+
+
+    // SBC r: Subtract with carry (register)
+    // Description: Subtracts from the 8-bit A register, the carry flag and the 8-bit register r, and stores the result back into the A register
+    // Opcode: 0b10011xxx/various
+    // Length: 1 byte: opcode
+    SbcR8FromA { src: R8 },
+
+
+    // SBC HL: Subtract with carry (indirect HL)
+    // Description: Subtracts from the 8-bit A register, the carry flag and data from the absolute address specified by the 16-bit register HL, and stores the result back into the A register
+    // Opcode: 0b10011110/0x9E
+    // Length: 1 byte: opcode
+    SbcHlFromA,
+
+
+    // SBC n: Subtract with carry (immediate)
+    // Description: Subtracts from the 8-bit A register, the carry flag and the immediate data n, and stores the result back into the A register
+    // Opcode: 0b11011110/0xDE
+    // Length: 2 bytes: opcode + n
+    SbcImm8FromA { imm: u8 },
+
+
+    // CP r: Compare (register)
+    // Description: Subtracts from the 8-bit A register, the 8-bit register r, and updates flags based on the result. This instruction is basically identical to SUB r, but does not update the A register
+    // Opcode: 0b10111xxx/various
+    // Length: 1 byte: opcode
+    CpR8WithA { src: R8 },
+
+
+    // CP HL: Compare (indirect HL)
+    // Description: Subtracts from the 8-bit A register, data from the absolute address specified by the 16-bit register HL, and updates flags based on the result. This instruction is basically identical to SUB HL, but does not update the A register
+    // Opcode: 0b10111110/0xBE
+    // Length: 1 byte: opcode
+    CpHlWithA,
+
+
+    // CP n: Compare (immediate)
+    // Description: Subtracts from the 8-bit A register, the immediate data n, and updates flags based on the result. This instruction is basically identical to SUB n, but does not update the A register
+    // Opcode: 0b11111110/0xFE
+    // Length: 2 bytes: opcode + n
+    CpImm8WithA { imm: u8 },
+
+
+    // INC r: Increment (register)
+    // Description: Increments data in the 8-bit register r
+    // Opcode: 0b00xxx100/various
+    // Length: 1 byte: opcode
+    IncR8 { src: R8 },
+
+
+    // INC HL: Increment (indirect HL)
+    // Description: Increments data at the absolute address specified by the 16-bit register HL
+    // Opcode: 0b00110100/0x34
+    // Length: 1 byte: opcode
+    IncHl,
+
+
+    // DEC r: Decrement (register)
+    // Description: Decrements data in the 8-bit register r
+    // Opcode: 0b00xxx101/various
+    // Length: 1 byte: opcode
+    DecR8 { src: R8 },
+
+
+    // DEC HL: Decrement (indirect HL)
+    // Description: Decrements data at the absolute address specified by the 16-bit register HL
+    // Opcode: 0b00110101/0x35
+    // Length: 1 byte: opcode
+    DecHl,
+
+
+    // AND r: Bitwise AND (register)
+    // Description: Performs a bitwise AND operation between the 8-bit A register and the 8-bit register r, and stores the result back into the A register
+    // Opcode: 0b10100xxx/various
+    // Length: 1 byte: opcode
+    AndAWithR8 { src: R8 },
+
+
+    // AND HL: Bitwise AND (indirect HL)
+    // Description: Performs a bitwise AND operation between the 8-bit A register and the data from the absolute address specified by the 16-bit register HL, and stores the result back into the A register
+    // Opcode: 0b10100110/0xA6
+    // Length: 1 byte: opcode
+    AndAWithHl,
+
+
+    // AND n: Bitwise AND (immediate)
+    // Description: Performs a bitwise AND operation between the 8-bit A register and immediate data n, and stores the result back into the A register
+    // Opcode: 0b11100110/0xE6
+    // Length: 2 bytes: opcode + n
+    AndAWithImm8 { imm: u8 },
+
+
+    // OR r: Bitwise OR (register)
+    // Description: Performs a bitwise OR operation between the 8-bit A register and the 8-bit register r, and stores the result back into the A register
+    // Opcode: 0b10110xxx/various
+    // Length: 1 byte: opcode
+    OrAWithR8 { src: R8 },
+
+
+    // OR HL: Bitwise OR (indirect HL)
+    // Description: Performs a bitwise OR operation between the 8-bit A register and the data from the absolute address specified by the 16-bit register HL, and stores the result back into the A register
+    // Opcode: 0b10110110/0xB6
+    // Length: 1 byte: opcode
+    OrAWithHl,
+
+
+    // OR n: Bitwise OR (immediate)
+    // Description: Performs a bitwise OR operation between the 8-bit A register and immediate data n, and stores the result back into the A register
+    // Opcode: 0b11110110/0xF6
+    // Length: 2 bytes: opcode + n
+    OrAWithImm8 { imm: u8 },
+
+
+    // XOR r: Bitwise XOR (register)
+    // Description: Performs a bitwise XOR operation between the 8-bit A register and the 8-bit register r, and stores the result back into the A register
+    // Opcode: 0b10101xxx/various
+    // Length: 1 byte: opcode
+    XorAWithR8 { src: R8 },
+
+
+    // XOR HL: Bitwise XOR (indirect HL)
+    // Description: Performs a bitwise XOR operation between the 8-bit A register and the data from the absolute address specified by the 16-bit register HL, and stores the result back into the A register
+    // Opcode: 0b10101110/0xAE
+    // Length: 1 byte: opcode
+    XorAWithHl,
+
+
+    // XOR n: Bitwise XOR (immediate)
+    // Description: Performs a bitwise XOR operation between the 8-bit A register and immediate data n, and stores the result back into the A register
+    // Opcode: 0b11101110/0xEE
+    // Length: 2 bytes: opcode + n
+    XorAWithImm8 { imm: u8 },
+
+
+    // CCF: Complement carry flag
+    // Description: Flips the carry flag, and clears the N and H flags
+    // Opcode: 0b00111111/0x3F
+    // Length: 1 byte: opcode
+    Ccf,
+
+
+    // SCF: Set carry flag
+    // Description: Sets the carry flag, and clears the N and H flags
+    // Opcode: 0b00110111/0x37
+    // Length: 1 byte: opcode
+    Scf,
+
+
+    // DAA: Decimal adjust accumulator
+    // Description: Behavior depends on the N flag,
+    //
+    // If the N flag is set:
+    // 1. Initialize the 8-bit adjustment value to 0
+    // 2. If the H flag is set, then add 0x06 to the adjustment
+    // 3. If the C flag is set, then add 0x60 to the adjustment
+    // 4. Subtract the adjustment from the 8-bit A register
+    //
+    // If the N flag is not set:
+    // 1. Initialize the 8-bit adjustment value to 0
+    // 2. If the H flag is set or A & 0x0F > 0x09, then add 0x06 to the adjustment
+    // 3. If the C flag is set or A > 0x99, then add 0x60 to the adjustment and set the C flag
+    // 4. Add the adjustment to the 8-bit A register
+    //
+    // Opcode: 0b00100111/0x27
+    // Length: 1 byte: opcode
+    Daa,
+
+
+    // CPL: Complement accumulator
+    // Description: Flips all the bits in the 8-bit A register, and sets the N and H flags
+    // Opcode: 0b00101111/0x2F
+    // Length: 1 byte: opcode
+    Cpl,
+
+
     // --- 8-BIT ARITHMETIC AND LOGICAL INSTRUCTIONS END ---
 
 
@@ -237,7 +476,7 @@ impl Instruction
     {
         match byte
         {
-            // 0x02 => Some(Instruction::LdReg { dest: , src: }),
+            // 0xC6 => Some(Instruction::AddImm8ToA { imm: }),
             _ => None,
         }
     }
@@ -346,7 +585,7 @@ impl GbCpu
 
     }
 
-    fn execute(&mut self, instr: Instruction)
+    fn execute(&mut self, instr: &Instruction)
     {
         // The instruction should already contain both the opcode and any operands
         // And then at this point we can do some kind of function dispatch to execute the instruction
