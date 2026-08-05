@@ -453,8 +453,38 @@ enum Instruction
     // --- 8-BIT ARITHMETIC AND LOGICAL INSTRUCTIONS END ---
 
 
-    // --- 16-BIT ARITHMETIC AND LOGICAL INSTRUCTIONS BEGIN ---
-    // --- 16-BIT ARITHMETIC AND LOGICAL INSTRUCTIONS END ---
+    // --- 16-BIT ARITHMETIC INSTRUCTIONS BEGIN ---
+
+
+    // INC rr: Increment 16-bit register
+    // Description: Increments data in the 16-bit register rr
+    // Opcode: 0b00xx0011/various
+    // Length: 1 byte: opcode
+    IncR16 { src: R16 },
+
+
+    // DEC rr: Decrement 16-bit register
+    // Description: Decrements data in the 16-bit register rr
+    // Opcode: 0b00xx1011/various
+    // Length: 1 byte: opcode
+    DecR16 { src: R16 },
+
+
+    // ADD HL, rr: Add (16-bit register)
+    // Description: Adds to the 16-bit HL register pair, the 16-bit register rr, and stores the result back into the HL register pair
+    // Opcode: 0b00xx1001/various
+    // Length: 1 byte: opcode
+    AddR16ToHl { src: R16 },
+
+
+    // ADD SP, e: Add to stack pointer (relative)
+    // Description: Adds to the 16-bit SP register, 16-bit data calculated by adding the signed 8-bit operand e to the 16-bit value of the SP register
+    // Opcode: 0b11101000/0xE8
+    // Length: 2 bytes: opcode + e
+    AddAdjSpToSp { imm: i8 },
+
+
+    // --- 16-BIT ARITHMETIC INSTRUCTIONS END ---
 
 
     // --- ROTATE, SHIFT, AND BIT OPERATION INSTRUCTIONS BEGIN ---
