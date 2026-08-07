@@ -488,6 +488,254 @@ enum Instruction
 
 
     // --- ROTATE, SHIFT, AND BIT OPERATION INSTRUCTIONS BEGIN ---
+
+
+    // RLCA: Rotate left circular (accumulator)
+    // Description: Rotates the 8-bit A register left in a circular manner (carry flag is updated but not used)
+    //
+    // Every bit is shifted to the left (e.g. bit 1 value is copied from bit 0). Bit 7 is copied both to bit 0 and the carry flag
+    // Note that unlike the related RLC r instruction, RLCA always sets the zero flag to 0 without looking at the resulting value of the calculation
+    //
+    // Opcode: 0b00000111/0x07
+    // Length: 1 byte: opcode
+    RlcA,
+
+
+    // RRCA: Rotate right circular (accumulator)
+    // Description: Rotates the 8-bit A register right in a circular manner (carry flag is updated but not used)
+    //
+    // Every bit is shifted to the right (e.g. bit 1 value is copied from bit 0). Bit 0 is copied both to bit 7 and the carry flag
+    // Note that unlike the related RRC r instruction, RRCA always sets the zero flag to 0 without looking at the resulting value of the calculation
+    //
+    // Opcode: 0b00001111/0x0F
+    // Length: 1 byte: opcode
+    RrcA,
+
+
+    // RLA: Rotate left (accumulator)
+    // Description: Rotates the 8-bit A register left through the carry flag
+    //
+    // Every bit is shifted to the left (e.g. bit 1 value is copied from bit 0). The carry flag is copied to bit 0, and bit 7 is copied to the carry flag
+    // Note that unlike the related RL r instruction, RLA always sets the zero flag to 0 without looking at the resulting value of the calculation
+    //
+    // Opcode: 0b00010111/0x17
+    // Length: 1 byte: opcode
+    RlA,
+
+
+    // RRA: Rotate right (accumulator)
+    // Description: Rotates the 8-bit A register right through the carry flag
+    //
+    // Every bit is shifted to the right (e.g. bit 1 value is copied to bit 0). The carry flag is copied to bit 7, and bit 0 is copied to the carry flag
+    // Note that unlike the related RR r instruction, RRA always sets the zero flag to 0 without looking at the resulting value of the calculation
+    //
+    // Opcode: 0b00011111/0x1F
+    // Length: 1 byte: opcode
+    RrA,
+
+
+    // RLC r: Rotate left circular (register)
+    // Description: Rotates the 8-bit register r value left in a circular manner (carry flag is updated but not used)
+    //
+    // Every bit is shifted to the left (e.g. bit 1 value is copied from bit 0). Bit 7 is copied both to bit 0 and the carry flag
+    //
+    // Opcode: 0b00000xxx/various
+    // Length: 2 bytes: CB prefix + opcode
+    RlcR8 { src: R8 },
+
+
+    // RLC HL: Rotate left circular (indirect HL)
+    // Description: Rotates the 8-bit data at the absolute address specified by the 16-bit register HL, left in a circular manner (carry flag is updated but not used)
+    //
+    // Every bit is shifted to the left (e.g. bit 1 value is copied from bit 0). Bit 7 is copied both to bit 0 and the carry flag
+    //
+    // Opcode: 0b00000110/0x06
+    // Length: 2 bytes: CB prefix + opcode
+    RlcHl,
+
+
+    // RRC r: Rotate right circular (register)
+    // Description: Rotates the 8-bit register r value right in a circular manner (carry flag is updated but not used)
+    //
+    // Every bit is shifted to the right (e.g. bit 1 value is copied to bit 0). Bit 0 is copied both to bit 7 and the carry flag
+    //
+    // Opcode: 0b00001xxx/various
+    // Length: 2 bytes: CB prefix + opcode
+    RrcR8 { src: R8 },
+
+
+    // RRC HL: Rotate right circular (indirect HL)
+    // Description: Rotates the 8-bit data at the absolute address specified by the 16-bit register HL, right in a circular manner (carry flag is updated but not used)
+    //
+    // Every bit is shifted to the right (e.g. bit 1 value is copied to bit 0). Bit 0 is copied both to bit 7 and the carry flag
+    //
+    // Opcode: 0b00001110/0x0E
+    // Length: 2 bytes: CB prefix + opcode
+    RrcHl,
+
+
+    // RL r: Rotate left (register)
+    // Description: Rotates the 8-bit register r value left through the carry flag
+    //
+    // Every bit is shifted to the left (e.g. bit 1 value is copied from bit 0). The carry flag is copied to bit 0, and bit 7 is copied to the carry flag
+    //
+    // Opcode: 0b00010xxx/various
+    // Length: 2 bytes: CB prefix + opcode
+    RlR8 { src: R8 },
+
+
+    // RL HL: Rotate left (indirect HL)
+    // Description: Rotates the 8-bit data at the absolute address specified by the 16-bit register HL, left through the carry flag
+    //
+    // Every bit is shifted to the left (e.g. bit 1 value is copied from bit 0). The carry flag is copied to bit 0, and bit 7 is copied to the carry flag
+    //
+    // Opcode: 0b00010110/0x16
+    // Length: 2 bytes: CB prefix + opcode
+    RlHl,
+
+
+    // RR r: Rotate right (register)
+    // Description: Rotates the 8-bit register r value right through the carry flag
+    //
+    // Every bit is shifted to the right (e.g. bit 1 value is copied to bit 0). The carry flag is copied to bit 7, and bit 0 is copied to the carry flag
+    //
+    // Opcode: 0b00011xxx/various
+    // Length: 2 bytes: CB prefix + opcode
+    RrR8 { src: R8 },
+
+
+    // RR HL: Rotate right (indirect HL)
+    // Description: Rotates the 8-bit data at the absolute address specified by the 16-bit register HL, right through the carry flag
+    //
+    // Every bit is shifted to the right (e.g. bit 1 value is copied to bit 0). The carry flag is copied to bit 7, and bit 0 is copied to the carry flag
+    //
+    // Opcode: 0b00011110/0x1E
+    // Length: 2 bytes: CB prefix + opcode
+    RrHl,
+
+
+    // SLA r: Shift left arithmetic (register)
+    // Description: Shifts the 8-bit register r value left by one bit using an arithmetic shift
+    //
+    // Bit 7 is shifted to the carry flag, and bit 0 is set to a fixed value of 0
+    //
+    // Opcode: 0b00100xxx/various
+    // Length: 2 bytes: CB prefix + opcode
+    SlaR8 { src: R8 },
+
+
+    // SLA HL: Shift left arithmetic (indirect HL)
+    // Description: Shifts the 8-bit value at the address specified by the HL register, left by one bit using an arithmetic shift
+    //
+    // Bit 7 is shifted to the carry flag, and bit 0 is set to a fixed value of 0
+    //
+    // Opcode: 0b00100110/0x26
+    // Length: 2 bytes: CB prefix + opcode
+    SlaHl,
+
+
+    // SRA r: Shift right arithmetic (register)
+    // Description: Shifts the 8-bit register r value right by one bit using an arithmetic shift
+    //
+    // Bit 7 retains its value, and bit 0 is shifted to the carry flag
+    //
+    // Opcode: 0b00101xxx/various
+    // Length: 2 bytes: CB prefix + opcode
+    SraR8 { src: R8 },
+
+
+    // SRA HL: Shift right arithmetic (indirect HL)
+    // Description: Shifts the 8-bit value at the address specified by the HL register, right by one bit using an arithmetic shift
+    //
+    // Bit 7 retains its value, and bit 0 is shifted to the carry flag
+    //
+    // Opcode: 0b00101110/0x2E
+    // Length: 2 bytes: CB prefix + opcode
+    SraHl,
+
+
+    // SWAP r: Swap nibbles (register)
+    // Description: Swaps the high and low 4-bit nibbles of the 8-bit register r
+    // Opcode: 0b00110xxx/various
+    // Length: 2 bytes: CB prefix + opcode
+    SwapR8 { src: R8 },
+
+
+    // SWAP HL: Swap nibbles (indirect HL)
+    // Description: Swaps the high and low 4-bit nibbles of the 8-bit data at the absolute address specified by the 16-bit register HL
+    // Opcode: 0b00110110/0x36
+    // Length: 2 bytes: CB prefix + opcode
+    SwapHl,
+
+
+    // SRL r: Shift right logical (register)
+    // Description: Shifts the 8-bit register r value right by one bit using a logical shift
+    //
+    // Bit 7 is set to a fixed value of 0, and bit 0 is shifted to the carry flag
+    //
+    // Opcode: 0b00111xxx/various
+    // Length: 2 bytes: CB prefix + opcode
+    SrlR8 { src: R8 },
+
+
+    // SRL HL: Shift right logical (indirect HL)
+    // Description: Shifts the 8-bit value at the address specified by the HL register, right by one bit using a logical shift
+    //
+    // Bit 7 is set to a fixed value of 0, and bit 0 is shifted to the carry flag
+    //
+    // Opcode: 0b00111110/0x3E
+    // Length: 2 bytes: CB prefix + opcode
+    SrlHl,
+
+
+    // BIT b, r: Test bit (register)
+    // Description: Tests the bit b of the 8-bit register r
+    //
+    // The zero flag is set to 1 if the chosen bit is 0, and 0 otherwise
+    //
+    // Opcode: 0b01xxxyyy/various
+    // Length: 2 bytes: CB prefix + opcode
+    BitBOfR8 { bit: u8, src: R8 },
+
+
+    // BIT b, HL: Test bit (indirect HL)
+    // Description: Tests the bit b of the 8-bit data at the absolute address specified by the 16-bit register HL
+    //
+    // The zero flag is set to 1 if the chosen bit is 0, and 0 otherwise
+    //
+    // Opcode: 0b01xxx110/various
+    // Length: 2 bytes: CB prefix + opcode
+    BitBOfHl { bit: u8 },
+
+
+    // RES b, r: Reset bit (register)
+    // Description: Resets the bit b of the 8-bit register r to 0
+    // Opcode: 0b10xxxyyy/various
+    // Length: 2 bytes: CB prefix + opcode
+    ResBOfR8 { bit: u8, src: R8 },
+
+
+    // RES b, HL: Reset bit (indirect HL)
+    // Description: Resets the bit b of the 8-bit data at the absolute address specified by the 16-bit register HL, to 0
+    // Opcode: 0b10xxx110/various
+    // Length: 2 bytes: CB prefix + opcode
+    ResBOfHl { bit: u8 },
+
+
+    // SET b, r: Set bit (register)
+    // Description: Sets the bit b of the 8-bit register r to 1
+    // Opcode: 0b11xxxyyy/various
+    // Length: 2 bytes: CB prefix + opcode
+    SetBOfR8 { bit: u8, src: R8 },
+
+
+    // SET b, HL: Set bit (indirect HL)
+    // Description: Sets the bit b of the 8-bit data at the absolute address specified by the 16-bit register HL, to 1
+    // Opcode: 0b11xxx110/various
+    // Length: 2 bytes: CB prefix + opcode
+    SetBOfHl { bit: u8 },
+
+
     // --- ROTATE, SHIFT, AND BIT OPERATION INSTRUCTIONS END ---
     
 
