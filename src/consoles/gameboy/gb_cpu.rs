@@ -6,35 +6,95 @@ const MASTER_CLK_FREQ: f64 = 4.194304e6;
 
 
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum R8
 {
-    A, B, C, D, E, H, L,
+    // 0b111
+    A, 
+
+    // 0b000
+    B, 
+
+    // 0b001
+    C, 
+
+    // 0b010
+    D, 
+
+    // 0b011
+    E, 
+
+    // 0b100
+    H, 
+
+    // 0b101
+    L,
 }
 
 
-#[derive(Debug)]
+impl R8
+{
+    fn from_byte(byte: u8) -> Result<Self, String>
+    {
+        match byte
+        {
+            0b111 => Ok(Self::A),
+            0b000 => Ok(Self::B),
+            0b001 => Ok(Self::C),
+            0b010 => Ok(Self::D),
+            0b011 => Ok(Self::E),
+            0b100 => Ok(Self::H),
+            0b101 => Ok(Self::L),
+            _ => Err(format!("Unknown byte: {:#010b}, cannot decode R8", byte)),
+        }
+    }
+}
+
+
+#[derive(Debug, PartialEq)]
 enum R16
 {
-    BC, DE, HL,
+    // 0b00
+    BC, 
+
+    // 0b01
+    DE, 
+
+    // 0b10
+    HL,
 }
 
 
-#[derive(Debug)]
+impl R16
+{
+    fn from_byte(byte: u8) -> Result<Self, String>
+    {
+        match byte
+        {
+            0b00 => Ok(Self::BC),
+            0b01 => Ok(Self::DE),
+            0b10 => Ok(Self::HL),
+            _ => Err(format!("Unknown byte: {:#010b}, cannot decode R16", byte)),
+        }
+    }
+}
+
+
+#[derive(Debug, PartialEq)]
 enum BitIdx
 {
     B0, B1, B2, B3, B4, B5, B6, B7,
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum Cond
 {
     Z, NZ, C, NC,
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 #[repr(u8)]
 enum RstVec
 {
@@ -43,7 +103,7 @@ enum RstVec
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 #[repr(u8)]
 enum IntVec
 {
@@ -51,7 +111,7 @@ enum IntVec
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum Instruction
 {
     // --- 8-BIT LOAD INSTRUCTIONS BEGIN ---
@@ -920,12 +980,24 @@ enum Instruction
 
 impl Instruction
 {
-    fn from_byte(byte: u8) -> Option<Self>
+    fn from_byte(byte: u8) -> Result<Self, String>
     {
         match byte
         {
-            // 0xC6 => Some(Instruction::AddImm8ToA { imm: }),
-            _ => None,
+            0x40..=0x7F => 
+            {
+                // To decode the dst and src registers, extract out the corresponding 3 bits each from the
+                // opcode and make sure they are right-aligned before calling the R8 constructor
+                let dst_bits = (byte & 0x38) >> 3;
+                let src_bits = byte & 0x07;
+                Ok(Self::LdR8FromR8 { dst: R8::from_byte(dst_bits)?, src: R8::from_byte(src_bits)? })
+            }
+
+
+            // 0xC6 => Ok(Self::AddImm8ToA { imm: }),
+
+
+            _ => Err(format!("Unknown Opcode: {:#X}, cannot decode Instruction", byte)),
         }
     }
 }
@@ -1066,6 +1138,103 @@ mod tests
     use super::*;
 
 
+    mod r8_tests
+    {
+        use super::*;
+
+
+        #[test]
+        fn test_from_byte()
+        {
+            let byte = 0b11111_111;
+            let r8 = R8::from_byte(byte);
+            assert!(r8.is_err());
+
+            let byte = 0b00000_111;
+            let r8 = R8::from_byte(byte).unwrap();
+            assert_eq!(r8, R8::A);
+
+            let byte = 0b00000_000;
+            let r8 = R8::from_byte(byte).unwrap();
+            assert_eq!(r8, R8::B);
+
+            let byte = 0b00000_001;
+            let r8 = R8::from_byte(byte).unwrap();
+            assert_eq!(r8, R8::C);
+
+            let byte = 0b00000_010;
+            let r8 = R8::from_byte(byte).unwrap();
+            assert_eq!(r8, R8::D);
+
+            let byte = 0b00000_011;
+            let r8 = R8::from_byte(byte).unwrap();
+            assert_eq!(r8, R8::E);
+
+            let byte = 0b00000_100;
+            let r8 = R8::from_byte(byte).unwrap();
+            assert_eq!(r8, R8::H);
+
+            let byte = 0b00000_101;
+            let r8 = R8::from_byte(byte).unwrap();
+            assert_eq!(r8, R8::L);
+        }
+    }
+
+
+    mod r16_tests
+    {
+        use super::*;
+
+
+        #[test]
+        fn test_from_byte()
+        {
+            let byte = 0b111111_11;
+            let r16 = R16::from_byte(byte);
+            assert!(r16.is_err());
+
+            let byte = 0b000000_00;
+            let r16 = R16::from_byte(byte).unwrap();
+            assert_eq!(r16, R16::BC);
+
+            let byte = 0b000000_01;
+            let r16 = R16::from_byte(byte).unwrap();
+            assert_eq!(r16, R16::DE);
+
+            let byte = 0b000000_10;
+            let r16 = R16::from_byte(byte).unwrap();
+            assert_eq!(r16, R16::HL);
+        }
+    }
+
+
+    mod instruction_tests
+    {
+        use super::*;
+
+
+        #[test]
+        fn test_from_byte()
+        {
+            let byte = 0b11_111_111;
+            let instr = Instruction::from_byte(byte);
+            assert!(instr.is_err());
+
+            let byte = 0b01_000_000;
+            let instr = Instruction::from_byte(byte).unwrap();
+            assert_eq!(instr, Instruction::LdR8FromR8 { dst: R8::from_byte(0b000).unwrap(), src: R8::from_byte(0b000).unwrap() });
+
+            let byte = 0b01_010_101;
+            let instr = Instruction::from_byte(byte).unwrap();
+            assert_eq!(instr, Instruction::LdR8FromR8 { dst: R8::from_byte(0b010).unwrap(), src: R8::from_byte(0b101).unwrap() });
+
+            let byte = 0b01_111_111;
+            let instr = Instruction::from_byte(byte).unwrap();
+            assert_eq!(instr, Instruction::LdR8FromR8 { dst: R8::from_byte(0b111).unwrap(), src: R8::from_byte(0b111).unwrap() });
+        }
+    }
+
+
     mod registers_tests
     {
         use super::*;
@@ -1079,7 +1248,6 @@ mod tests
                 f: 0xD9,
                 ..Default::default()
             };
-
             let result = registers.get_af();
             assert_eq!(result, 0x4FD9);
         }
@@ -1088,7 +1256,6 @@ mod tests
         fn test_set_af()
         {
             let mut registers = Registers::default();
-
             registers.set_af(0x4FD9);
             assert_eq!(registers.get_af(), 0x4FD9);
         }
@@ -1101,7 +1268,6 @@ mod tests
                 c: 0xFF,
                 ..Default::default()
             };
-
             let result = registers.get_bc();
             assert_eq!(result, 0x72FF);
         }
@@ -1110,7 +1276,6 @@ mod tests
         fn test_set_bc()
         {
             let mut registers = Registers::default();
-
             registers.set_bc(0x72FF);
             assert_eq!(registers.get_bc(), 0x72FF);
         }
@@ -1123,7 +1288,6 @@ mod tests
                 e: 0x92,
                 ..Default::default()
             };
-
             let result = registers.get_de();
             assert_eq!(result, 0x2892);
         }
@@ -1132,7 +1296,6 @@ mod tests
         fn test_set_de()
         {
             let mut registers = Registers::default();
-
             registers.set_de(0x2892);
             assert_eq!(registers.get_de(), 0x2892);
         }
@@ -1145,7 +1308,6 @@ mod tests
                 l: 0xA7,
                 ..Default::default()
             };
-
             let result = registers.get_hl();
             assert_eq!(result, 0xE9A7);
         }
@@ -1154,7 +1316,6 @@ mod tests
         fn test_set_hl()
         {
             let mut registers = Registers::default();
-
             registers.set_hl(0xE9A7);
             assert_eq!(registers.get_hl(), 0xE9A7);
         }
@@ -1172,7 +1333,6 @@ mod tests
 
         }
     }
-
 }
 
 
