@@ -16,7 +16,38 @@ enum R8
 #[derive(Debug)]
 enum R16
 {
-    SP, BC, DE, HL,
+    BC, DE, HL,
+}
+
+
+#[derive(Debug)]
+enum BitIdx
+{
+    B0, B1, B2, B3, B4, B5, B6, B7,
+}
+
+
+#[derive(Debug)]
+enum Cond
+{
+    Z, NZ, C, NC,
+}
+
+
+#[derive(Debug)]
+#[repr(u8)]
+enum RstVec
+{
+    V0 = 0x00, V1 = 0x08, V2 = 0x10, V3 = 0x18,
+    V4 = 0x20, V5 = 0x28, V6 = 0x30, V7 = 0x38,
+}
+
+
+#[derive(Debug)]
+#[repr(u8)]
+enum IntVec
+{
+    V0 = 0x40, V1 = 0x48, V2 = 0x50, V3 = 0x58, V4 = 0x60,
 }
 
 
@@ -695,7 +726,7 @@ enum Instruction
     //
     // Opcode: 0b01xxxyyy/various
     // Length: 2 bytes: CB prefix + opcode
-    BitBOfR8 { bit: u8, src: R8 },
+    TstBitOfR8 { bit: BitIdx, src: R8 },
 
 
     // BIT b, HL: Test bit (indirect HL)
@@ -705,41 +736,129 @@ enum Instruction
     //
     // Opcode: 0b01xxx110/various
     // Length: 2 bytes: CB prefix + opcode
-    BitBOfHl { bit: u8 },
+    TstBitOfHl { bit: BitIdx },
 
 
     // RES b, r: Reset bit (register)
     // Description: Resets the bit b of the 8-bit register r to 0
     // Opcode: 0b10xxxyyy/various
     // Length: 2 bytes: CB prefix + opcode
-    ResBOfR8 { bit: u8, src: R8 },
+    ResBitOfR8 { bit: BitIdx, src: R8 },
 
 
     // RES b, HL: Reset bit (indirect HL)
     // Description: Resets the bit b of the 8-bit data at the absolute address specified by the 16-bit register HL, to 0
     // Opcode: 0b10xxx110/various
     // Length: 2 bytes: CB prefix + opcode
-    ResBOfHl { bit: u8 },
+    ResBitOfHl { bit: BitIdx },
 
 
     // SET b, r: Set bit (register)
     // Description: Sets the bit b of the 8-bit register r to 1
     // Opcode: 0b11xxxyyy/various
     // Length: 2 bytes: CB prefix + opcode
-    SetBOfR8 { bit: u8, src: R8 },
+    SetBitOfR8 { bit: BitIdx, src: R8 },
 
 
     // SET b, HL: Set bit (indirect HL)
     // Description: Sets the bit b of the 8-bit data at the absolute address specified by the 16-bit register HL, to 1
     // Opcode: 0b11xxx110/various
     // Length: 2 bytes: CB prefix + opcode
-    SetBOfHl { bit: u8 },
+    SetBitOfHl { bit: BitIdx },
 
 
     // --- ROTATE, SHIFT, AND BIT OPERATION INSTRUCTIONS END ---
     
 
     // --- CONTROL FLOW INSTRUCTIONS BEGIN ---
+
+
+    // JP nn: Jump
+    // Description: Unconditional jump to the absolute address specified by the 16-bit immediate operand nn
+    // Opcode: 0b11000011/0xC3
+    // Length: 3 bytes: opcode + LSB(nn) + MSB(nn)
+    JpImm16 { imm: u16 },
+
+
+    // JP HL: Jump to HL
+    // Description: Unconditional jump to the absolute address specified by the 16-bit register HL
+    // Opcode: 0b11101001/0xE9
+    // Length: 1 byte: opcode
+    JpHl,
+
+
+    // JP cc, nn: Jump (conditional)
+    // Description: Conditional jump to the absolute address specified by the 16-bit operand nn, depending on the condition cc
+    //
+    // Note that the operand (absolute address) is read even when the condition is false!
+    //
+    // Opcode: 0b110xx010/various
+    // Length: 3 bytes: opcode + LSB(nn) + MSB(nn)
+    JpCondImm16 { cond: Cond, imm: u16 },
+
+
+    // JR e: Relative jump
+    // Description: Unconditional jump to the relative address specified by the signed 8-bit operand e
+    // Opcode: 0b00011000/0x18
+    // Length: 2 bytes: opcode + e
+    JrImm8 { imm: i8 },
+
+
+    // JR cc, e: Relative jump (conditional)
+    // Description: Conditional jump to the relative address specified by the signed 8-bit operand e, depending on the condition cc
+    //
+    // Note that the operand (relative address offset) is read even when the condition is false!
+    //
+    // Opcode: 0b001xx000/various
+    // Length: 2 bytes: opcode + e
+    JrCondImm8 { cond: Cond, imm: i8 },
+
+
+    // CALL nn: Call function
+    // Description: Unconditional function call to the absolute address specified by the 16-bit operand nn
+    // Opcode: 0b11001101/0xCD
+    // Length: 3 bytes: opcode + LSB(nn) + MSB(nn)
+    CallImm16 { imm: u16 },
+
+
+    // CALL cc, nn: Call function (conditional)
+    // Description: Conditional function call to the absolute address specified by the 16-bit operand nn, depending on the condition cc
+    //
+    // Note that the operand (absolute address) is read even when the condition is false!
+    //
+    // Opcode: 0b110xx100/various
+    // Length: 3 bytes: opcode + LSB(nn) + MSB(nn)
+    CallCondImm16 { cond: Cond, imm: u16 },
+
+
+    // RET: Return from function
+    // Description: Unconditional return from a function
+    // Opcode: 0b11001001/0xC9
+    // Length: 1 byte: opcode
+    Ret,
+
+
+    // RET cc: Return from function (conditional)
+    // Description: Conditional return from a function, depending on the condition cc
+    // Opcode: 0b110xx000/various
+    // Length: 1 byte: opcode
+    RetCond { cond: Cond },
+
+
+    // RETI: Return from interrupt handler
+    // Description: Unconditional return from a function. Also enables interrupts by setting IME = 1
+    // Opcode: 0b11011001/0xD9
+    // Length: 1 byte: opcode
+    Reti,
+
+
+    // RST n: Restart / Call function (implied)
+    // Description: Unconditional function call to the absolute fixed address defined by the opcode
+    // Opcode: 0b11xxx111/various
+    // Length: 1 byte: opcode
+    RstVec { vec: RstVec },
+
+
     // --- CONTROL FLOW INSTRUCTIONS END ---
 
 
@@ -852,6 +971,9 @@ pub struct GbCpu
 
     // Program Counter
     pc: u16,
+
+    // Interrupt Master Enable Flag
+    ime: bool,
 }
 
 
