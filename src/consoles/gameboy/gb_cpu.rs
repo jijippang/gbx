@@ -863,6 +863,57 @@ enum Instruction
 
 
     // --- MISCELLANEOUS INSTRUCTIONS BEGIN ---
+    
+
+    // HALT: Halt system clock
+    // Description: Enter CPU low-power consumption mode until an interrupt occurs, behavior depends on the state of the IME flag and whether interrupts are pending (i.e. if IE & IF != 0)
+    //
+    // If the IME flag is set:
+    // The CPU enters low-power mode until after an interrupt is about to be serviced. The handler
+    // is executed normally, and the CPU resumes execution after the HALT when that returns
+    //
+    // If the IME flag is not set, and no interrupts are pending:
+    // As soon as an interrupt becomes pending, the CPU resumes execution. This is like the above,
+    // except that the handler is not called
+    //
+    // If the IME flag is not set, and some interrupt is pending:
+    // The CPU continues execution after the HALT, but the byte after is read twice in a row (PC is
+    // not incremented, due to a hardware bug)
+    //
+    // Opcode: 0b01110110/0x76
+    // Length: 1 byte: opcode
+    Halt,
+
+
+    // NOTE: Implemented as an NOP
+    // STOP n: Stop system and main clocks
+    // Description: Enter CPU very low-power consumption mode until an interrupt occurs
+    // Opcode: 0b00010000/0x10
+    // Length: 2 bytes: opcode + n
+    Stop,
+
+
+    // DI: Disable interrupts
+    // Description: Disables interrupt handling by setting IME = 0 and cancelling any scheduled effects of the EI instruction if any
+    // Opcode: 0b11110011/0xF3
+    // Length: 1 byte: opcode
+    Di,
+
+
+    // EI: Enable interrupts
+    // Description: Schedules interrupt handling to be enabled after the next machine cycle
+    // Opcode: 0b11111011/0xFB
+    // Length: 1 byte: opcode
+    Ei,
+
+
+    // NOP: No operation
+    // Description: No operation. This instruction doesn't do anything, but can be used to add a delay of one machine cycle and increment the PC by one
+    // Opcode: 0b00000000/0x00
+    // Length: 1 byte: opcode
+    Nop,
+
+
     // --- MISCELLANEOUS INSTRUCTIONS END ---
 }
 
