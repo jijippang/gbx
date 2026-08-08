@@ -1,4 +1,8 @@
 
+use super::gb_mmu::{GbMmu, Data, Address};
+
+
+
 
 const MASTER_CLK_FREQ: f64 = 4.194304e6;
 
@@ -1086,14 +1090,17 @@ impl Registers
 #[derive(Debug, Default)]
 pub struct GbCpu
 {
+    // 16-bit address space with a data size of 8-bits or in other words 64 KiB of memory to read and/or write data
+    memory: GbMmu,
+
     // 8, 8-bit registers which can be combined into 4, 16-bit registers if needed
     registers: Registers,
 
     // Stack Pointer
-    sp: u16,
+    sp: Address,
 
     // Program Counter
-    pc: u16,
+    pc: Address,
 
     // Interrupt Master Enable Flag
     ime: bool,
@@ -1106,6 +1113,13 @@ impl GbCpu
     {
         // Performs the fetch, decode, and execute cycle
 
+    }
+
+    fn fetch(&mut self) -> Data
+    {
+        let data = self.memory.read(self.pc);
+        self.pc += 1;
+        data.unwrap()
     }
 
     fn execute(&mut self, instr: &Instruction)
@@ -1131,6 +1145,7 @@ impl GbCpu
 
 
 // --- UNIT TESTS BEGIN ---
+
 
 #[cfg(test)]
 mod tests
