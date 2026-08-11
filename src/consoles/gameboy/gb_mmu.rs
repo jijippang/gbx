@@ -1,4 +1,7 @@
 
+use tracing::warn;
+
+
 
 pub type Data = u8;
 pub type Address = u16;
@@ -65,10 +68,7 @@ impl GbMmu
             0xC000..=0xDFFF => Ok(self.wram[(addr - 0xC000) as usize]),
             0xFE00..=0xFE9F => Ok(self.oam[(addr - 0xFE00) as usize]),
             0xFF80..=0xFFFE => Ok(self.hram[(addr - 0xFF80) as usize]),
-            _ => Err(()),
-
-            // TODO: Add a log here if we get an Err
-            // _ => Err(format!("Invalid Address: {:#X}, cannot read from memory", addr)),
+            _ => { warn!("Invalid Address: {:#X}, cannot read from memory", addr); Err(()) }
         }
     }
 
@@ -82,10 +82,7 @@ impl GbMmu
             0xC000..=0xDFFF => { self.wram[(addr - 0xC000) as usize] = data; Ok(()) }
             0xFE00..=0xFE9F => { self.oam[(addr - 0xFE00) as usize] = data; Ok(()) }
             0xFF80..=0xFFFE => { self.hram[(addr - 0xFF80) as usize] = data; Ok(()) }
-            _ => Err(()),
-
-            // TODO: Add a log here if we get an Err
-            // _ => Err(format!("Invalid Address: {:#X}, cannot write {:#X} to memory", addr, data)),
+            _ => { warn!("Invalid Address: {:#X}, cannot write {:#X} to memory", addr, data); Err(()) }
         }
     }
 }

@@ -1,6 +1,6 @@
 
 use std::path::Path;
-use crate::consoles::Console;
+use super::Console;
 use gb_cpu::GbCpu;
 use gb_mmu::GbMmu;
 use gb_ppu::GbPpu;
@@ -10,6 +10,7 @@ mod gb_cpu;
 mod gb_mmu;
 mod gb_ppu;
 mod gb_apu;
+
 
 
 #[derive(Debug, Default)]
