@@ -12,7 +12,9 @@ const VRAM_SIZE: usize = 0x9FFF - 0x8000 + 1;
 const EXTRAM_SIZE: usize = 0xBFFF - 0xA000 + 1;
 const WRAM_SIZE: usize = 0xDFFF - 0xC000 + 1;
 const OAM_SIZE: usize = 0xFE9F - 0xFE00 + 1;
+const IO_SIZE: usize = 0xFF7F - 0xFF00 + 1;
 const HRAM_SIZE: usize = 0xFFFE - 0xFF80 + 1;
+const IE_SIZE: usize = 0xFFFF - 0xFFFF + 1;
 
 
 
@@ -32,11 +34,19 @@ pub struct GbMmu
     // [0xC000, 0xDFFF]
     wram: [Data; WRAM_SIZE],
 
+    // [0xE000, 0xFDFF] -> eram (mirror of [0xC000, 0xDDFF] which is a subset of wram)
+
     // [0xFE00, 0xFE9F]
     oam: [Data; OAM_SIZE],
 
+    // [0xFF00, 0xFF7F]
+    io: [Data; IO_SIZE],
+
     // [0xFF80, 0xFFFE]
     hram: [Data; HRAM_SIZE],
+
+    // [0xFFFF, 0xFFFF]
+    ie: [Data; IE_SIZE],
 }
 
 
@@ -50,7 +60,9 @@ impl Default for GbMmu
             extram: [0; EXTRAM_SIZE],
             wram: [0; WRAM_SIZE],
             oam: [0; OAM_SIZE],
+            io: [0; IO_SIZE],
             hram: [0; HRAM_SIZE],
+            ie: [0; IE_SIZE],
         }
     }
 }
@@ -66,8 +78,11 @@ impl GbMmu
             0x8000..=0x9FFF => Ok(self.vram[(addr - 0x8000) as usize]),
             0xA000..=0xBFFF => Ok(self.extram[(addr - 0xA000) as usize]),
             0xC000..=0xDFFF => Ok(self.wram[(addr - 0xC000) as usize]),
+            0xE000..=0xFDFF => Ok(self.wram[(addr - 0x2000 - 0xC000) as usize]),
             0xFE00..=0xFE9F => Ok(self.oam[(addr - 0xFE00) as usize]),
+            0xFF00..=0xFF7F => Ok(self.io[(addr - 0xFF00) as usize]),
             0xFF80..=0xFFFE => Ok(self.hram[(addr - 0xFF80) as usize]),
+            0xFFFF..=0xFFFF => Ok(self.ie[(addr - 0xFFFF) as usize]),
             _ => { warn!("Invalid Address: {:#X}, cannot read from memory", addr); Err(()) }
         }
     }
@@ -80,8 +95,11 @@ impl GbMmu
             0x8000..=0x9FFF => { self.vram[(addr - 0x8000) as usize] = data; Ok(()) }
             0xA000..=0xBFFF => { self.extram[(addr - 0xA000) as usize] = data; Ok(()) }
             0xC000..=0xDFFF => { self.wram[(addr - 0xC000) as usize] = data; Ok(()) }
+            0xE000..=0xFDFF => { self.wram[(addr - 0x2000 - 0xC000) as usize] = data; Ok(()) }
             0xFE00..=0xFE9F => { self.oam[(addr - 0xFE00) as usize] = data; Ok(()) }
+            0xFF00..=0xFF7F => { self.io[(addr - 0xFF00) as usize] = data; Ok(()) }
             0xFF80..=0xFFFE => { self.hram[(addr - 0xFF80) as usize] = data; Ok(()) }
+            0xFFFF..=0xFFFF => { self.ie[(addr - 0xFFFF) as usize] = data; Ok(()) }
             _ => { warn!("Invalid Address: {:#X}, cannot write {:#X} to memory", addr, data); Err(()) }
         }
     }
@@ -120,11 +138,13 @@ mod tests
         #[test]
         fn test_read()
         {
+            // out of bounds
             let gb_mmu = GbMmu::default();
             let addr = 0xFEAB;
             let result = gb_mmu.read(addr);
             assert!(result.is_err());
 
+            // rom
             let gb_mmu = GbMmu {
                 rom: [0xAB; ROM_SIZE],
                 ..Default::default()
@@ -133,6 +153,7 @@ mod tests
             let result = gb_mmu.read(addr).unwrap();
             assert_eq!(result, 0xAB);
 
+            // vram
             let gb_mmu = GbMmu {
                 vram: [0x11; VRAM_SIZE],
                 ..Default::default()
@@ -140,17 +161,49 @@ mod tests
             let addr = 0x952C;
             let result = gb_mmu.read(addr).unwrap();
             assert_eq!(result, 0x11);
+
+            // wram
+            let gb_mmu = GbMmu {
+                wram: [0x79; WRAM_SIZE],
+                ..Default::default()
+            };
+            let addr = 0xC4A2;
+            let result = gb_mmu.read(addr).unwrap();
+            assert_eq!(result, 0x79);
+
+            // eram
+            let gb_mmu = GbMmu {
+                wram: [0x0D; WRAM_SIZE],
+                ..Default::default()
+            };
+            let addr = 0xFA8F;
+            let result = gb_mmu.read(addr).unwrap();
+            assert_eq!(result, 0x0D);
+            let addr = 0xFA8F - 0x2000;
+            let result = gb_mmu.read(addr).unwrap();
+            assert_eq!(result, 0x0D);
+
+            // ie
+            let gb_mmu = GbMmu {
+                ie: [0x1C; IE_SIZE],
+                ..Default::default()
+            };
+            let addr = 0xFFFF;
+            let result = gb_mmu.read(addr).unwrap();
+            assert_eq!(result, 0x1C);
         }
 
         #[test]
         fn test_write()
         {
+            // out of bounds
             let mut gb_mmu = GbMmu::default();
             let addr = 0xFEAB;
             let data = 0x69;
             let result = gb_mmu.write(addr, data);
             assert!(result.is_err());
 
+            // rom
             let mut gb_mmu = GbMmu::default();
             let addr = 0x1307;
             let data = 0xAB;
@@ -159,6 +212,7 @@ mod tests
             let result = gb_mmu.read(addr).unwrap();
             assert_eq!(result, 0xAB);
 
+            // vram
             let mut gb_mmu = GbMmu::default();
             let addr = 0x952C;
             let data = 0x11;
@@ -166,6 +220,36 @@ mod tests
             assert!(result.is_ok());
             let result = gb_mmu.read(addr).unwrap();
             assert_eq!(result, 0x11);
+
+            // wram
+            let mut gb_mmu = GbMmu::default();
+            let addr = 0xC4A2;
+            let data = 0x79;
+            let result = gb_mmu.write(addr, data);
+            assert!(result.is_ok());
+            let result = gb_mmu.read(addr).unwrap();
+            assert_eq!(result, 0x79);
+
+            // eram
+            let mut gb_mmu = GbMmu::default();
+            let addr = 0xFA8F;
+            let data = 0x0D;
+            let result = gb_mmu.write(addr, data);
+            assert!(result.is_ok());
+            let result = gb_mmu.read(addr).unwrap();
+            assert_eq!(result, 0x0D);
+            let addr = 0xFA8F - 0x2000;
+            let result = gb_mmu.read(addr).unwrap();
+            assert_eq!(result, 0x0D);
+
+            // ie
+            let mut gb_mmu = GbMmu::default();
+            let addr = 0xFFFF;
+            let data = 0x1C;
+            let result = gb_mmu.write(addr, data);
+            assert!(result.is_ok());
+            let result = gb_mmu.read(addr).unwrap();
+            assert_eq!(result, 0x1C);
         }
     }
 }
