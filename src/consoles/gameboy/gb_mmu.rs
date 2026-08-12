@@ -1,4 +1,6 @@
 
+use std::fmt;
+use std::error::Error;
 use tracing::warn;
 
 
@@ -7,6 +9,8 @@ pub type Data = u8;
 pub type Address = u16;
 
 
+
+const OPEN_BUS: Data = 0xFF;
 const ROM_SIZE: usize = 0x7FFF - 0x0000 + 1;
 const VRAM_SIZE: usize = 0x9FFF - 0x8000 + 1;
 const EXTRAM_SIZE: usize = 0xBFFF - 0xA000 + 1;
@@ -17,6 +21,78 @@ const HRAM_SIZE: usize = 0xFFFE - 0xFF80 + 1;
 const IE_SIZE: usize = 0xFFFF - 0xFFFF + 1;
 
 
+
+
+
+#[derive(Debug)]
+pub enum MmuReadError
+{
+    // Attempting to read from memory locations that are unusable or prohibited
+    OutOfBounds(Data), 
+
+    // Attempting to read from memory locations that are currently locked
+    Locked(Data), 
+
+    // Attempting to read from memory locations that are write only
+    WriteOnly(Data), 
+}
+
+impl fmt::Display for MmuReadError
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
+    {
+        match self
+        {
+            Self::OutOfBounds(data) => write!(f, "Attempting to read from memory location that is unusable or prohibited, returning default value of: {:#X}", data),
+            Self::Locked(data) => write!(f, "Attempting to read from memory location that is currently locked, returning default value of: {:#X}", data),
+            Self::WriteOnly(data) => write!(f, "Attempting to read from memory location that is write only, returning default value of: {:#X}", data),
+        }
+    }
+}
+
+impl From<MmuReadError> for Data
+{
+    fn from(err: MmuReadError) -> Self
+    {
+        match err
+        {
+            MmuReadError::OutOfBounds(data) => data,
+            MmuReadError::Locked(data) => data,
+            MmuReadError::WriteOnly(data) => data,
+        }
+    }
+}
+
+impl Error for MmuReadError {}
+
+
+#[derive(Debug)]
+pub enum MmuWriteError
+{
+    // Attempting to write to memory locations that are unusable or prohibited
+    OutOfBounds, 
+
+    // Attempting to write to memory locations that are currently locked
+    Locked, 
+
+    // Attempting to write to memory locations that are read only
+    ReadOnly, 
+}
+
+impl fmt::Display for MmuWriteError
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
+    {
+        match self
+        {
+            Self::OutOfBounds => write!(f, "Attempting to write to memory location that is unusable or prohibited"),
+            Self::Locked => write!(f, "Attempting to write to memory location that is currently locked"),
+            Self::ReadOnly => write!(f, "Attempting to write to memory location that is read only"),
+        }
+    }
+}
+
+impl Error for MmuWriteError {}
 
 
 #[derive(Debug)]
@@ -70,7 +146,7 @@ impl Default for GbMmu
 
 impl GbMmu
 {
-    pub fn read(&self, addr: Address) -> Result<Data, ()>
+    pub fn read(&self, addr: Address) -> Result<Data, MmuReadError>
     {
         match addr
         {
@@ -83,11 +159,11 @@ impl GbMmu
             0xFF00..=0xFF7F => Ok(self.io[(addr - 0xFF00) as usize]),
             0xFF80..=0xFFFE => Ok(self.hram[(addr - 0xFF80) as usize]),
             0xFFFF..=0xFFFF => Ok(self.ie[(addr - 0xFFFF) as usize]),
-            _ => { warn!("Invalid Address: {:#X}, cannot read from memory", addr); Err(()) }
+            _ => { warn!("Invalid Address: {:#X}, cannot read from memory", addr); Err(MmuReadError::OutOfBounds(OPEN_BUS)) }
         }
     }
 
-    pub fn write(&mut self, addr: Address, data: Data) -> Result<(), ()>
+    pub fn write(&mut self, addr: Address, data: Data) -> Result<(), MmuWriteError>
     {
         match addr
         {
@@ -100,7 +176,7 @@ impl GbMmu
             0xFF00..=0xFF7F => { self.io[(addr - 0xFF00) as usize] = data; Ok(()) }
             0xFF80..=0xFFFE => { self.hram[(addr - 0xFF80) as usize] = data; Ok(()) }
             0xFFFF..=0xFFFF => { self.ie[(addr - 0xFFFF) as usize] = data; Ok(()) }
-            _ => { warn!("Invalid Address: {:#X}, cannot write {:#X} to memory", addr, data); Err(()) }
+            _ => { warn!("Invalid Address: {:#X}, cannot write {:#X} to memory", addr, data); Err(MmuWriteError::OutOfBounds) }
         }
     }
 }

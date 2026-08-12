@@ -1,5 +1,6 @@
 
-use super::gb_mmu::{GbMmu, Data, Address};
+use super::gb_mmu::{MmuReadError, GbMmu, Data, Address};
+use tracing::{info, warn};
 
 
 
@@ -1119,7 +1120,7 @@ impl GbCpu
     {
         let data = self.memory.read(self.pc);
         self.pc += 1;
-        data.unwrap()
+        data.unwrap_or_else(|err| { err.into() })
     }
 
     fn execute(&mut self, instr: &Instruction)
