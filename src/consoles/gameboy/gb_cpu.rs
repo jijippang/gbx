@@ -53,11 +53,8 @@ impl R8 {
 #[derive(Debug, PartialEq)]
 enum R16 {
     AF,
-
     BC,
-
     DE,
-
     HL,
 }
 
@@ -100,7 +97,7 @@ enum BitIdx {
 }
 
 #[derive(Debug, PartialEq)]
-enum Cond {
+enum Condition {
     Z,
     NZ,
     C,
@@ -332,7 +329,7 @@ impl GbCpu {
         }
     }
 
-    fn check_condition(&self, cond: Cond) -> bool {
+    fn check_condition(&self, cond: Condition) -> bool {
         // TODO: Write this helper to aid in the implementation of some of the instructions in the execute() call
         false
     }

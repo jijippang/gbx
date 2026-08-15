@@ -1,4 +1,4 @@
-use super::{BitIdx, Cond, Data, GbCpu, R8, R16, RstVec};
+use super::{BitIdx, Condition, Data, GbCpu, R8, R16, RstVec};
 
 #[derive(Debug, PartialEq)]
 pub enum Instruction {
@@ -642,7 +642,7 @@ pub enum Instruction {
     //
     // Opcode: 0b110xx010/various
     // Length: 3 bytes: opcode + LSB(nn) + MSB(nn)
-    JpCondImm16 { cond: Cond, imm: u16 },
+    JpCondImm16 { cond: Condition, imm: u16 },
 
     // JR e: Relative jump
     // Description: Unconditional jump to the relative address specified by the signed 8-bit operand e
@@ -657,7 +657,7 @@ pub enum Instruction {
     //
     // Opcode: 0b001xx000/various
     // Length: 2 bytes: opcode + e
-    JrCondImm8 { cond: Cond, imm: i8 },
+    JrCondImm8 { cond: Condition, imm: i8 },
 
     // CALL nn: Call function
     // Description: Unconditional function call to the absolute address specified by the 16-bit operand nn
@@ -672,7 +672,7 @@ pub enum Instruction {
     //
     // Opcode: 0b110xx100/various
     // Length: 3 bytes: opcode + LSB(nn) + MSB(nn)
-    CallCondImm16 { cond: Cond, imm: u16 },
+    CallCondImm16 { cond: Condition, imm: u16 },
 
     // RET: Return from function
     // Description: Unconditional return from a function
@@ -684,7 +684,7 @@ pub enum Instruction {
     // Description: Conditional return from a function, depending on the condition cc
     // Opcode: 0b110xx000/various
     // Length: 1 byte: opcode
-    RetCond { cond: Cond },
+    RetCond { cond: Condition },
 
     // RETI: Return from interrupt handler
     // Description: Unconditional return from a function. Also enables interrupts by setting IME = 1
