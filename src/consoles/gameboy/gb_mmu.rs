@@ -37,6 +37,7 @@ pub enum MmuReadError
     WriteOnly(Data), 
 }
 
+
 impl fmt::Display for MmuReadError
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
@@ -50,6 +51,7 @@ impl fmt::Display for MmuReadError
     }
 }
 
+
 impl From<MmuReadError> for Data
 {
     fn from(err: MmuReadError) -> Self
@@ -62,6 +64,7 @@ impl From<MmuReadError> for Data
         }
     }
 }
+
 
 impl Error for MmuReadError {}
 
@@ -79,6 +82,7 @@ pub enum MmuWriteError
     ReadOnly, 
 }
 
+
 impl fmt::Display for MmuWriteError
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
@@ -91,6 +95,7 @@ impl fmt::Display for MmuWriteError
         }
     }
 }
+
 
 impl Error for MmuWriteError {}
 
