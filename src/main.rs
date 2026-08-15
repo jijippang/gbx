@@ -1,22 +1,16 @@
-
-use std::path::PathBuf;
 use clap::{Parser, ValueEnum};
-use tracing::{level_filters::LevelFilter, info};
-use tracing_subscriber::EnvFilter;
-use emulator::Emulator;
 use consoles::ConsoleModel;
-use consoles::{gameboy::GameBoy};
+use consoles::gameboy::GameBoy;
+use emulator::Emulator;
+use std::path::PathBuf;
+use tracing::{info, level_filters::LevelFilter};
+use tracing_subscriber::EnvFilter;
 
-mod emulator;
 mod consoles;
-
-
-
-
+mod emulator;
 
 #[derive(Debug, Default, Copy, Clone, ValueEnum)]
-enum LogLevelFilter
-{
+enum LogLevelFilter {
     Trace,
     Debug,
     #[default]
@@ -26,13 +20,9 @@ enum LogLevelFilter
     Off,
 }
 
-
-impl From<LogLevelFilter> for LevelFilter
-{
-    fn from(level: LogLevelFilter) -> Self
-    {
-        match level
-        {
+impl From<LogLevelFilter> for LevelFilter {
+    fn from(level: LogLevelFilter) -> Self {
+        match level {
             LogLevelFilter::Trace => Self::TRACE,
             LogLevelFilter::Debug => Self::DEBUG,
             LogLevelFilter::Info => Self::INFO,
@@ -43,13 +33,9 @@ impl From<LogLevelFilter> for LevelFilter
     }
 }
 
-
-impl From<LevelFilter> for LogLevelFilter
-{
-    fn from(level: LevelFilter) -> Self
-    {
-        match level
-        {
+impl From<LevelFilter> for LogLevelFilter {
+    fn from(level: LevelFilter) -> Self {
+        match level {
             LevelFilter::TRACE => Self::Trace,
             LevelFilter::DEBUG => Self::Debug,
             LevelFilter::INFO => Self::Info,
@@ -60,15 +46,9 @@ impl From<LevelFilter> for LogLevelFilter
     }
 }
 
-
 #[derive(Parser, Debug)]
-#[command(
-    version,
-    name = "gbx", 
-    about = "Emulator for the Game Boy family",
-)]
-struct Args
-{
+#[command(version, name = "gbx", about = "Emulator for the Game Boy family")]
+struct Args {
     /// Path to the ROM file to load
     #[arg(short, long)]
     rom_path: Option<PathBuf>,
@@ -86,42 +66,30 @@ struct Args
     log_path: Option<PathBuf>,
 }
 
-
-fn main() 
-{
+fn main() {
     let args = Args::parse();
     // println!("rom_path: {:?}", args.rom_path);
     // println!("console_model: {:?}", args.console_model);
-
 
     // Initialize logging through tracing
     let log_level_filter = LevelFilter::from(args.log_level_filter);
     let filter = EnvFilter::default().add_directive(log_level_filter.into());
 
-    tracing_subscriber::fmt()
-        .with_env_filter(filter)
-        .init();
-
-
-
-
-
+    tracing_subscriber::fmt().with_env_filter(filter).init();
 
     info!("Starting GBX Emulator");
     info!("Log Level Filter: {}", log_level_filter);
 
-
-
-    let console = match args.console_model
-    {
+    let console = match args.console_model {
         ConsoleModel::GameBoy => GameBoy::default(),
         // ConsoleModel::GameBoyColor => GameBoyColor::default(),
         // ConsoleModel::GameBoyAdvance => GameBoyAdvance::default(),
-        _ => panic!("Console Model: {:?}, is not yet supported", args.console_model),
+        _ => panic!(
+            "Console Model: {:?}, is not yet supported",
+            args.console_model
+        ),
     };
 
     let emulator = Emulator::new(console);
     // println!("{:?}", emulator);
 }
-
-

@@ -1,10 +1,2 @@
-
-
-
 #[derive(Debug, Default)]
-pub struct GbPpu
-{
-
-}
-
-
+pub struct GbPpu {}

@@ -1,11 +1,2 @@
-
-
-
-
 #[derive(Debug, Default)]
-pub struct GbApu
-{
-
-}
-
-
+pub struct GbApu {}

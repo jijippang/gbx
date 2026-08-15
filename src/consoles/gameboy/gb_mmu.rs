@@ -1,14 +1,9 @@
-
-use std::fmt;
 use std::error::Error;
+use std::fmt;
 use tracing::warn;
-
-
 
 pub type Data = u8;
 pub type Address = u16;
-
-
 
 const OPEN_BUS: Data = 0xFF;
 const ROM_SIZE: usize = 0x7FFF - 0x0000 + 1;
@@ -20,44 +15,43 @@ const IO_SIZE: usize = 0xFF7F - 0xFF00 + 1;
 const HRAM_SIZE: usize = 0xFFFE - 0xFF80 + 1;
 const IE_SIZE: usize = 0xFFFF - 0xFFFF + 1;
 
-
-
-
-
 #[derive(Debug)]
-pub enum MmuReadError
-{
+pub enum MmuReadError {
     // Attempting to read from memory locations that are unusable or prohibited
-    OutOfBounds(Data), 
+    OutOfBounds(Data),
 
     // Attempting to read from memory locations that are currently locked
-    Locked(Data), 
+    Locked(Data),
 
     // Attempting to read from memory locations that are write only
-    WriteOnly(Data), 
+    WriteOnly(Data),
 }
 
-
-impl fmt::Display for MmuReadError
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
-    {
-        match self
-        {
-            Self::OutOfBounds(data) => write!(f, "Attempting to read from memory location that is unusable or prohibited, returning default value of: {:#X}", data),
-            Self::Locked(data) => write!(f, "Attempting to read from memory location that is currently locked, returning default value of: {:#X}", data),
-            Self::WriteOnly(data) => write!(f, "Attempting to read from memory location that is write only, returning default value of: {:#X}", data),
+impl fmt::Display for MmuReadError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::OutOfBounds(data) => write!(
+                f,
+                "Attempting to read from memory location that is unusable or prohibited, returning default value of: {:#X}",
+                data
+            ),
+            Self::Locked(data) => write!(
+                f,
+                "Attempting to read from memory location that is currently locked, returning default value of: {:#X}",
+                data
+            ),
+            Self::WriteOnly(data) => write!(
+                f,
+                "Attempting to read from memory location that is write only, returning default value of: {:#X}",
+                data
+            ),
         }
     }
 }
 
-
-impl From<MmuReadError> for Data
-{
-    fn from(err: MmuReadError) -> Self
-    {
-        match err
-        {
+impl From<MmuReadError> for Data {
+    fn from(err: MmuReadError) -> Self {
+        match err {
             MmuReadError::OutOfBounds(data) => data,
             MmuReadError::Locked(data) => data,
             MmuReadError::WriteOnly(data) => data,
@@ -65,44 +59,43 @@ impl From<MmuReadError> for Data
     }
 }
 
-
 impl Error for MmuReadError {}
 
-
 #[derive(Debug)]
-pub enum MmuWriteError
-{
+pub enum MmuWriteError {
     // Attempting to write to memory locations that are unusable or prohibited
-    OutOfBounds, 
+    OutOfBounds,
 
     // Attempting to write to memory locations that are currently locked
-    Locked, 
+    Locked,
 
     // Attempting to write to memory locations that are read only
-    ReadOnly, 
+    ReadOnly,
 }
 
-
-impl fmt::Display for MmuWriteError
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
-    {
-        match self
-        {
-            Self::OutOfBounds => write!(f, "Attempting to write to memory location that is unusable or prohibited"),
-            Self::Locked => write!(f, "Attempting to write to memory location that is currently locked"),
-            Self::ReadOnly => write!(f, "Attempting to write to memory location that is read only"),
+impl fmt::Display for MmuWriteError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::OutOfBounds => write!(
+                f,
+                "Attempting to write to memory location that is unusable or prohibited"
+            ),
+            Self::Locked => write!(
+                f,
+                "Attempting to write to memory location that is currently locked"
+            ),
+            Self::ReadOnly => write!(
+                f,
+                "Attempting to write to memory location that is read only"
+            ),
         }
     }
 }
 
-
 impl Error for MmuWriteError {}
 
-
 #[derive(Debug)]
-pub struct GbMmu
-{
+pub struct GbMmu {
     // [0x0000, 0x7FFF]
     rom: [Data; ROM_SIZE],
 
@@ -130,11 +123,8 @@ pub struct GbMmu
     ie: [Data; IE_SIZE],
 }
 
-
-impl Default for GbMmu
-{
-    fn default() -> Self
-    {
+impl Default for GbMmu {
+    fn default() -> Self {
         Self {
             rom: [0; ROM_SIZE],
             vram: [0; VRAM_SIZE],
@@ -148,13 +138,9 @@ impl Default for GbMmu
     }
 }
 
-
-impl GbMmu
-{
-    pub fn read(&self, addr: Address) -> Result<Data, MmuReadError>
-    {
-        match addr
-        {
+impl GbMmu {
+    pub fn read(&self, addr: Address) -> Result<Data, MmuReadError> {
+        match addr {
             0x0000..=0x7FFF => Ok(self.rom[addr as usize]),
             0x8000..=0x9FFF => Ok(self.vram[(addr - 0x8000) as usize]),
             0xA000..=0xBFFF => Ok(self.extram[(addr - 0xA000) as usize]),
@@ -164,61 +150,76 @@ impl GbMmu
             0xFF00..=0xFF7F => Ok(self.io[(addr - 0xFF00) as usize]),
             0xFF80..=0xFFFE => Ok(self.hram[(addr - 0xFF80) as usize]),
             0xFFFF..=0xFFFF => Ok(self.ie[(addr - 0xFFFF) as usize]),
-            _ => { warn!("Invalid Address: {:#X}, cannot read from memory", addr); Err(MmuReadError::OutOfBounds(OPEN_BUS)) }
+            _ => {
+                warn!("Invalid Address: {:#X}, cannot read from memory", addr);
+                Err(MmuReadError::OutOfBounds(OPEN_BUS))
+            }
         }
     }
 
-    pub fn write(&mut self, addr: Address, data: Data) -> Result<(), MmuWriteError>
-    {
-        match addr
-        {
-            0x0000..=0x7FFF => { self.rom[addr as usize] = data; Ok(()) }
-            0x8000..=0x9FFF => { self.vram[(addr - 0x8000) as usize] = data; Ok(()) }
-            0xA000..=0xBFFF => { self.extram[(addr - 0xA000) as usize] = data; Ok(()) }
-            0xC000..=0xDFFF => { self.wram[(addr - 0xC000) as usize] = data; Ok(()) }
-            0xE000..=0xFDFF => { self.wram[(addr - 0x2000 - 0xC000) as usize] = data; Ok(()) }
-            0xFE00..=0xFE9F => { self.oam[(addr - 0xFE00) as usize] = data; Ok(()) }
-            0xFF00..=0xFF7F => { self.io[(addr - 0xFF00) as usize] = data; Ok(()) }
-            0xFF80..=0xFFFE => { self.hram[(addr - 0xFF80) as usize] = data; Ok(()) }
-            0xFFFF..=0xFFFF => { self.ie[(addr - 0xFFFF) as usize] = data; Ok(()) }
-            _ => { warn!("Invalid Address: {:#X}, cannot write {:#X} to memory", addr, data); Err(MmuWriteError::OutOfBounds) }
+    pub fn write(&mut self, addr: Address, data: Data) -> Result<(), MmuWriteError> {
+        match addr {
+            0x0000..=0x7FFF => {
+                self.rom[addr as usize] = data;
+                Ok(())
+            }
+            0x8000..=0x9FFF => {
+                self.vram[(addr - 0x8000) as usize] = data;
+                Ok(())
+            }
+            0xA000..=0xBFFF => {
+                self.extram[(addr - 0xA000) as usize] = data;
+                Ok(())
+            }
+            0xC000..=0xDFFF => {
+                self.wram[(addr - 0xC000) as usize] = data;
+                Ok(())
+            }
+            0xE000..=0xFDFF => {
+                self.wram[(addr - 0x2000 - 0xC000) as usize] = data;
+                Ok(())
+            }
+            0xFE00..=0xFE9F => {
+                self.oam[(addr - 0xFE00) as usize] = data;
+                Ok(())
+            }
+            0xFF00..=0xFF7F => {
+                self.io[(addr - 0xFF00) as usize] = data;
+                Ok(())
+            }
+            0xFF80..=0xFFFE => {
+                self.hram[(addr - 0xFF80) as usize] = data;
+                Ok(())
+            }
+            0xFFFF..=0xFFFF => {
+                self.ie[(addr - 0xFFFF) as usize] = data;
+                Ok(())
+            }
+            _ => {
+                warn!(
+                    "Invalid Address: {:#X}, cannot write {:#X} to memory",
+                    addr, data
+                );
+                Err(MmuWriteError::OutOfBounds)
+            }
         }
     }
 }
-
-
-
-
-
-
 
 // Memory Bank Controllers
-trait Mbc
-{
-
-}
-
-
-
-
+trait Mbc {}
 
 // --- UNIT TESTS BEGIN ---
 
-
 #[cfg(test)]
-mod tests
-{
+mod tests {
     use super::*;
 
-
-    mod gb_mmu_tests
-    {
+    mod gb_mmu_tests {
         use super::*;
 
-
         #[test]
-        fn test_read()
-        {
+        fn test_read() {
             // out of bounds
             let gb_mmu = GbMmu::default();
             let addr = 0xFEAB;
@@ -275,8 +276,7 @@ mod tests
         }
 
         #[test]
-        fn test_write()
-        {
+        fn test_write() {
             // out of bounds
             let mut gb_mmu = GbMmu::default();
             let addr = 0xFEAB;
@@ -335,7 +335,4 @@ mod tests
     }
 }
 
-
 // --- UNIT TESTS END ---
-
-

@@ -1,26 +1,15 @@
-
-use super::gb_mmu::{GbMmu, Data, Address};
-use tracing::{info, warn, error};
+use super::gb_mmu::{Address, Data, GbMmu};
 use instruction::Instruction;
-
+use tracing::{error, info, warn};
 
 mod instruction;
 
-
-
 type MCycles = u8;
-
 
 const MASTER_CLK_FREQ: f64 = 4.194304e6;
 
-
-
-
-
-
 #[derive(Debug, PartialEq)]
-enum R8
-{
+enum R8 {
     // Accumulator
     A,
 
@@ -46,13 +35,9 @@ enum R8
     L,
 }
 
-
-impl R8
-{
-    fn from_byte(byte: u8) -> Result<Self, String>
-    {
-        match byte
-        {
+impl R8 {
+    fn from_byte(byte: u8) -> Result<Self, String> {
+        match byte {
             0b111 => Ok(Self::A),
             0b000 => Ok(Self::B),
             0b001 => Ok(Self::C),
@@ -65,10 +50,8 @@ impl R8
     }
 }
 
-
 #[derive(Debug, PartialEq)]
-enum R16
-{
+enum R16 {
     AF,
 
     BC,
@@ -78,13 +61,9 @@ enum R16
     HL,
 }
 
-
-impl R16
-{
-    fn from_byte(byte: u8) -> Result<Self, String>
-    {
-        match byte
-        {
+impl R16 {
+    fn from_byte(byte: u8) -> Result<Self, String> {
+        match byte {
             0b00 => Ok(Self::BC),
             0b01 => Ok(Self::DE),
             0b10 => Ok(Self::HL),
@@ -93,10 +72,8 @@ impl R16
     }
 }
 
-
 #[derive(Debug, PartialEq)]
-enum Flag
-{
+enum Flag {
     // Zero Flag
     Z,
 
@@ -110,41 +87,51 @@ enum Flag
     C,
 }
 
-
 #[derive(Debug, PartialEq)]
-enum BitIdx
-{
-    B0, B1, B2, B3, B4, B5, B6, B7,
+enum BitIdx {
+    B0,
+    B1,
+    B2,
+    B3,
+    B4,
+    B5,
+    B6,
+    B7,
 }
 
-
 #[derive(Debug, PartialEq)]
-enum Cond
-{
-    Z, NZ, C, NC,
+enum Cond {
+    Z,
+    NZ,
+    C,
+    NC,
 }
-
-
-#[derive(Debug, PartialEq)]
-#[repr(u8)]
-enum RstVec
-{
-    V0 = 0x00, V1 = 0x08, V2 = 0x10, V3 = 0x18,
-    V4 = 0x20, V5 = 0x28, V6 = 0x30, V7 = 0x38,
-}
-
 
 #[derive(Debug, PartialEq)]
 #[repr(u8)]
-enum IntVec
-{
-    V0 = 0x40, V1 = 0x48, V2 = 0x50, V3 = 0x58, V4 = 0x60,
+enum RstVec {
+    V0 = 0x00,
+    V1 = 0x08,
+    V2 = 0x10,
+    V3 = 0x18,
+    V4 = 0x20,
+    V5 = 0x28,
+    V6 = 0x30,
+    V7 = 0x38,
 }
 
+#[derive(Debug, PartialEq)]
+#[repr(u8)]
+enum IntVec {
+    V0 = 0x40,
+    V1 = 0x48,
+    V2 = 0x50,
+    V3 = 0x58,
+    V4 = 0x60,
+}
 
 #[derive(Debug, Default)]
-struct Registers
-{
+struct Registers {
     // Accumulator
     a: Data,
 
@@ -170,13 +157,9 @@ struct Registers
     l: Data,
 }
 
-
-impl Registers
-{
-    fn get_r8(&self, r8: R8) -> Data
-    {
-        match r8
-        {
+impl Registers {
+    fn get_r8(&self, r8: R8) -> Data {
+        match r8 {
             R8::A => self.a,
             R8::B => self.b,
             R8::C => self.c,
@@ -188,10 +171,8 @@ impl Registers
         }
     }
 
-    fn set_r8(&mut self, r8: R8, val: Data)
-    {
-        match r8
-        {
+    fn set_r8(&mut self, r8: R8, val: Data) {
+        match r8 {
             R8::A => self.a = val,
             R8::B => self.b = val,
             R8::C => self.c = val,
@@ -204,10 +185,8 @@ impl Registers
         }
     }
 
-    fn get_r16(&self, r16: R16) -> u16
-    {
-        match r16
-        {
+    fn get_r16(&self, r16: R16) -> u16 {
+        match r16 {
             R16::AF => Self::combine_bytes(self.f, self.a),
             R16::BC => Self::combine_bytes(self.c, self.b),
             R16::DE => Self::combine_bytes(self.e, self.d),
@@ -215,38 +194,30 @@ impl Registers
         }
     }
 
-    fn set_r16(&mut self, r16: R16, val: u16)
-    {
+    fn set_r16(&mut self, r16: R16, val: u16) {
         let (low, high) = Self::split_bytes(val);
-        match r16
-        {
-            R16::AF => 
-            {
+        match r16 {
+            R16::AF => {
                 self.set_r8(R8::F, low);
                 self.set_r8(R8::A, high);
             }
-            R16::BC => 
-            {
+            R16::BC => {
                 self.set_r8(R8::C, low);
                 self.set_r8(R8::B, high);
             }
-            R16::DE => 
-            {
+            R16::DE => {
                 self.set_r8(R8::E, low);
                 self.set_r8(R8::D, high);
             }
-            R16::HL => 
-            {
+            R16::HL => {
                 self.set_r8(R8::L, low);
                 self.set_r8(R8::H, high);
             }
         }
     }
 
-    fn get_flag(&self, flag: Flag) -> bool
-    {
-        match flag
-        {
+    fn get_flag(&self, flag: Flag) -> bool {
+        match flag {
             Flag::Z => (self.f & 0x80) != 0,
             Flag::N => (self.f & 0x40) != 0,
             Flag::H => (self.f & 0x20) != 0,
@@ -254,34 +225,52 @@ impl Registers
         }
     }
 
-    fn set_flag(&mut self, flag: Flag, val: bool)
-    {
-        match flag
-        {
-            Flag::Z => if val { self.f |= 0x80 } else { self.f &= 0x70 },
-            Flag::N => if val { self.f |= 0x40 } else { self.f &= 0xB0 },
-            Flag::H => if val { self.f |= 0x20 } else { self.f &= 0xD0 },
-            Flag::C => if val { self.f |= 0x10 } else { self.f &= 0xE0 },
+    fn set_flag(&mut self, flag: Flag, val: bool) {
+        match flag {
+            Flag::Z => {
+                if val {
+                    self.f |= 0x80
+                } else {
+                    self.f &= 0x70
+                }
+            }
+            Flag::N => {
+                if val {
+                    self.f |= 0x40
+                } else {
+                    self.f &= 0xB0
+                }
+            }
+            Flag::H => {
+                if val {
+                    self.f |= 0x20
+                } else {
+                    self.f &= 0xD0
+                }
+            }
+            Flag::C => {
+                if val {
+                    self.f |= 0x10
+                } else {
+                    self.f &= 0xE0
+                }
+            }
         }
     }
 
-    fn combine_bytes(low: u8, high: u8) -> u16
-    {
+    fn combine_bytes(low: u8, high: u8) -> u16 {
         ((high as u16) << 8) | (low as u16)
     }
 
-    fn split_bytes(bytes: u16) -> (u8, u8)
-    {
+    fn split_bytes(bytes: u16) -> (u8, u8) {
         let high = (bytes >> 8) as u8;
         let low = (bytes & 0xFF) as u8;
         (low, high)
     }
 }
 
-
 #[derive(Debug, Default)]
-pub struct GbCpu
-{
+pub struct GbCpu {
     // 16-bit address space with a data size of 8-bits or in other words 64 KiB of memory to read and/or write data
     memory: GbMmu,
 
@@ -298,24 +287,18 @@ pub struct GbCpu
     ime: bool,
 }
 
-
-impl GbCpu
-{
-    pub fn step(&mut self)
-    {
+impl GbCpu {
+    pub fn step(&mut self) {
         // Fetch
         let opcode = self.fetch();
 
         // Decode
-        match Instruction::decode(opcode, self)
-        {
-            Ok(instr) => 
-            {
+        match Instruction::decode(opcode, self) {
+            Ok(instr) => {
                 // Execute
                 let m_cycles = self.execute(instr);
             }
-            Err(err) =>
-            {
+            Err(err) => {
                 error!("Decode Error: {}", err);
 
                 // TODO: Halt the CPU or jump to a reset vector
@@ -323,24 +306,19 @@ impl GbCpu
         }
     }
 
-    fn fetch(&mut self) -> Data
-    {
+    fn fetch(&mut self) -> Data {
         let data = self.memory.read(self.pc);
         self.pc += 1;
-        data.unwrap_or_else(|err| { err.into() })
+        data.unwrap_or_else(|err| err.into())
     }
 
     #[inline]
-    fn execute(&mut self, instr: Instruction) -> MCycles
-    {
+    fn execute(&mut self, instr: Instruction) -> MCycles {
         // The instruction should already contain both the opcode and any operands
         // And then at this point we can do some kind of function dispatch to execute the instruction
-        match instr
-        {
-            Instruction::LdR8FromR8 { dst, src } => 
-            {
-                if dst != src
-                {
+        match instr {
+            Instruction::LdR8FromR8 { dst, src } => {
+                if dst != src {
                     let src_data = self.registers.get_r8(src);
                     self.registers.set_r8(dst, src_data);
                 }
@@ -354,8 +332,7 @@ impl GbCpu
         }
     }
 
-    fn check_condition(&self, cond: Cond) -> bool
-    {
+    fn check_condition(&self, cond: Cond) -> bool {
         // TODO: Write this helper to aid in the implementation of some of the instructions in the execute() call
         false
     }
@@ -363,24 +340,17 @@ impl GbCpu
     // TODO: Add more helper methods here as needed to aid in the implementation of the execute() call
 }
 
-
 // --- UNIT TESTS BEGIN ---
 
-
 #[cfg(test)]
-mod tests
-{
+mod tests {
     use super::*;
 
-
-    mod r8_tests
-    {
+    mod r8_tests {
         use super::*;
 
-
         #[test]
-        fn test_from_byte()
-        {
+        fn test_from_byte() {
             let byte = 0b11111_111;
             let r8 = R8::from_byte(byte);
             assert!(r8.is_err());
@@ -415,15 +385,11 @@ mod tests
         }
     }
 
-
-    mod r16_tests
-    {
+    mod r16_tests {
         use super::*;
 
-
         #[test]
-        fn test_from_byte()
-        {
+        fn test_from_byte() {
             let byte = 0b111111_11;
             let r16 = R16::from_byte(byte);
             assert!(r16.is_err());
@@ -442,15 +408,11 @@ mod tests
         }
     }
 
-
-    mod registers_tests
-    {
+    mod registers_tests {
         use super::*;
 
-
         #[test]
-        fn test_get_r8()
-        {
+        fn test_get_r8() {
             let registers = Registers {
                 a: 0x4F,
                 b: 0x72,
@@ -488,8 +450,7 @@ mod tests
         }
 
         #[test]
-        fn test_set_r8()
-        {
+        fn test_set_r8() {
             let mut registers = Registers::default();
 
             registers.set_r8(R8::A, 0x4F);
@@ -518,8 +479,7 @@ mod tests
         }
 
         #[test]
-        fn test_get_r16()
-        {
+        fn test_get_r16() {
             let registers = Registers {
                 a: 0x4F,
                 b: 0x72,
@@ -545,8 +505,7 @@ mod tests
         }
 
         #[test]
-        fn test_set_r16()
-        {
+        fn test_set_r16() {
             let mut registers = Registers::default();
 
             registers.set_r16(R16::AF, 0x4FD9);
@@ -563,8 +522,7 @@ mod tests
         }
 
         #[test]
-        fn test_get_flag()
-        {
+        fn test_get_flag() {
             let registers = Registers {
                 f: 0xD9,
                 ..Default::default()
@@ -584,8 +542,7 @@ mod tests
         }
 
         #[test]
-        fn test_set_flag()
-        {
+        fn test_set_flag() {
             let mut registers = Registers::default();
 
             registers.set_flag(Flag::Z, false);
@@ -602,21 +559,14 @@ mod tests
         }
     }
 
-
-    mod gb_cpu_tests
-    {
+    mod gb_cpu_tests {
         use super::*;
 
-
         #[test]
-        fn test()
-        {
+        fn test() {
             // TODO: Add unit tests for GbCpu
         }
     }
 }
 
-
 // --- UNIT TESTS END ---
-
-
