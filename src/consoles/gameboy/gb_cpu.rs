@@ -330,8 +330,12 @@ impl GbCpu {
     }
 
     fn check_condition(&self, cond: Condition) -> bool {
-        // TODO: Write this helper to aid in the implementation of some of the instructions in the execute() call
-        false
+        match cond {
+            Condition::Z => self.registers.get_flag(Flag::Z) == true,
+            Condition::NZ => self.registers.get_flag(Flag::Z) == false,
+            Condition::C => self.registers.get_flag(Flag::C) == true,
+            Condition::NC => self.registers.get_flag(Flag::C) == false,
+        }
     }
 
     // TODO: Add more helper methods here as needed to aid in the implementation of the execute() call
