@@ -8,6 +8,9 @@ const MAX_EMU_SPD_MULT: SpeedMultiplier = 100.0;
 
 #[derive(Debug)]
 pub enum EmulatorSpeedPreset {
+    // 0.1x
+    Min,
+
     // 0.5x
     Half,
 
@@ -27,11 +30,12 @@ pub enum EmulatorSpeedPreset {
 impl EmulatorSpeedPreset {
     fn to_speed_mult(&self) -> SpeedMultiplier {
         match self {
+            Self::Min => MIN_EMU_SPD_MULT,
             Self::Half => 0.5,
             Self::Normal => 1.0,
             Self::Double => 2.0,
             Self::Turbo => 10.0,
-            Self::Max => 100.0,
+            Self::Max => MAX_EMU_SPD_MULT,
         }
     }
 }
