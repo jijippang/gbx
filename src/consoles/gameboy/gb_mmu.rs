@@ -204,6 +204,14 @@ impl GbMmu {
             }
         }
     }
+
+    pub fn new(cartridge: &[Data]) -> Self {
+        Self {
+            // TODO: Finish the rest of the constructor
+            rom: [0xFF; ROM_SIZE],
+            ..Default::default()
+        }
+    }
 }
 
 // Memory Bank Controllers

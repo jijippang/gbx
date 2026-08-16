@@ -1,7 +1,7 @@
 use clap::{Parser, ValueEnum};
 use consoles::ConsoleModel;
 use consoles::gameboy::GameBoy;
-use emulator::Emulator;
+use emulator::{Emulator, EmulatorSpeed, EmulatorSpeedPreset};
 use std::path::PathBuf;
 use tracing::{info, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
@@ -90,6 +90,8 @@ fn main() {
         ),
     };
 
-    let emulator = Emulator::new(console);
+    let mut emulator = Emulator::new(console, EmulatorSpeed::Preset(EmulatorSpeedPreset::Normal));
+    // let mut emulator = Emulator::new(console, EmulatorSpeed::Custom(4.0));
+    emulator.run();
     // println!("{:?}", emulator);
 }

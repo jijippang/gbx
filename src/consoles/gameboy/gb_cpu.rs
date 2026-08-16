@@ -1,12 +1,9 @@
+use super::TCycles;
 use super::gb_mmu::{Address, Data, GbMmu};
 use instruction::Instruction;
 use tracing::{error, info, warn};
 
 mod instruction;
-
-type MCycles = u8;
-
-const MASTER_CLK_FREQ: f64 = 4.194304e6;
 
 #[derive(Debug, PartialEq)]
 enum R8 {
@@ -285,7 +282,7 @@ pub struct GbCpu {
 }
 
 impl GbCpu {
-    pub fn step(&mut self) {
+    pub fn step(&mut self) -> TCycles {
         // Fetch
         let opcode = self.fetch();
 
@@ -293,24 +290,25 @@ impl GbCpu {
         match Instruction::decode(opcode, self) {
             Ok(instr) => {
                 // Execute
-                let m_cycles = self.execute(instr);
+                self.execute(instr)
             }
             Err(err) => {
                 error!("Decode Error: {}", err);
 
                 // TODO: Halt the CPU or jump to a reset vector
+                0
             }
         }
     }
 
     fn fetch(&mut self) -> Data {
         let data = self.memory.read(self.pc);
-        self.pc += 1;
+        self.pc = self.pc.wrapping_add(1);
         data.unwrap_or_else(|err| err.into())
     }
 
     #[inline]
-    fn execute(&mut self, instr: Instruction) -> MCycles {
+    fn execute(&mut self, instr: Instruction) -> TCycles {
         // The instruction should already contain both the opcode and any operands
         // And then at this point we can do some kind of function dispatch to execute the instruction
         match instr {
@@ -319,10 +317,10 @@ impl GbCpu {
                     let src_data = self.registers.get_r8(src);
                     self.registers.set_r8(dst, src_data);
                 }
-                1
+                4
             }
 
-            Instruction::Nop => 1,
+            Instruction::Nop => 4,
 
             // NOTE: Placeholder, remove once all instructions are implemented
             _ => 0,
