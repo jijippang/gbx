@@ -78,8 +78,4 @@ impl Console for GameBoy {
             Ok(cartridge)
         }
     }
-
-    fn get_cycles_per_frame() -> u64 {
-        (Self::CONSOLE_MASTER_CLK_FREQ / Self::CONSOLE_FPS).round() as u64
-    }
 }
