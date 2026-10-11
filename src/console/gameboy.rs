@@ -1,6 +1,7 @@
 use super::{Cartridge, Console};
 use gb_apu::GbApu;
 use gb_cpu::GbCpu;
+use gb_mmu::GbMmu;
 use gb_ppu::GbPpu;
 use std::fs;
 use std::io;
@@ -20,6 +21,8 @@ pub struct GameBoy {
     apu: GbApu,
     cpu: GbCpu,
     ppu: GbPpu,
+    // TODO: Change this into a Rc<RefCell<GbMmu>> later for sharing the MMU with the other components
+    mmu: GbMmu,
 
     // Keeps track of how many TCycles the CPU has stepped beyond the frame boundary
     // This is necessary in order to keep an accurate time-sync between the rest of the components and the CPU
@@ -63,8 +66,11 @@ impl Console for GameBoy {
         // self.ppu.get_video_buffer();
     }
 
-    fn load_cartridge(&mut self, file_path: &Path) -> io::Result<Cartridge> {
-        info!("Attempting to load cartridge from: {}", file_path.display());
+    fn load_cartridge(&mut self, file_path: impl AsRef<Path>) -> Result<(), io::Error> {
+        info!(
+            "Attempting to load cartridge from: {}",
+            file_path.as_ref().display()
+        );
         let cartridge = fs::read(file_path)?;
 
         // Validate cartridge size
@@ -75,7 +81,8 @@ impl Console for GameBoy {
                 Self::CONSOLE_CART_SIZES
             )))
         } else {
-            Ok(cartridge)
+            self.mmu.load_cartridge(&cartridge);
+            Ok(())
         }
     }
 }

@@ -2,6 +2,9 @@ use std::error::Error;
 use std::fmt;
 use tracing::warn;
 
+mod cartridge;
+mod mbc;
+
 pub type Data = u8;
 pub type Address = u16;
 
@@ -13,7 +16,6 @@ const WRAM_SIZE: usize = 0xDFFF - 0xC000 + 1;
 const OAM_SIZE: usize = 0xFE9F - 0xFE00 + 1;
 const IO_SIZE: usize = 0xFF7F - 0xFF00 + 1;
 const HRAM_SIZE: usize = 0xFFFE - 0xFF80 + 1;
-const IE_SIZE: usize = 0xFFFF - 0xFFFF + 1;
 
 #[derive(Debug)]
 pub enum MmuReadError {
@@ -119,8 +121,8 @@ pub struct GbMmu {
     // [0xFF80, 0xFFFE]
     hram: [Data; HRAM_SIZE],
 
-    // [0xFFFF, 0xFFFF]
-    ie: [Data; IE_SIZE],
+    // 0xFFFF
+    ie: Data,
 }
 
 impl Default for GbMmu {
@@ -133,7 +135,7 @@ impl Default for GbMmu {
             oam: [0; OAM_SIZE],
             io: [0; IO_SIZE],
             hram: [0; HRAM_SIZE],
-            ie: [0; IE_SIZE],
+            ie: 0,
         }
     }
 }
@@ -149,7 +151,7 @@ impl GbMmu {
             0xFE00..=0xFE9F => Ok(self.oam[(addr - 0xFE00) as usize]),
             0xFF00..=0xFF7F => Ok(self.io[(addr - 0xFF00) as usize]),
             0xFF80..=0xFFFE => Ok(self.hram[(addr - 0xFF80) as usize]),
-            0xFFFF..=0xFFFF => Ok(self.ie[(addr - 0xFFFF) as usize]),
+            0xFFFF => Ok(self.ie),
             _ => {
                 warn!("Invalid Address: {:#X}, cannot read from memory", addr);
                 Err(MmuReadError::OutOfBounds(OPEN_BUS))
@@ -191,8 +193,8 @@ impl GbMmu {
                 self.hram[(addr - 0xFF80) as usize] = data;
                 Ok(())
             }
-            0xFFFF..=0xFFFF => {
-                self.ie[(addr - 0xFFFF) as usize] = data;
+            0xFFFF => {
+                self.ie = data;
                 Ok(())
             }
             _ => {
@@ -205,17 +207,10 @@ impl GbMmu {
         }
     }
 
-    pub fn new(cartridge: &[Data]) -> Self {
-        Self {
-            // TODO: Finish the rest of the constructor
-            rom: [0xFF; ROM_SIZE],
-            ..Default::default()
-        }
+    pub fn load_cartridge(&mut self, cartridge: &[Data]) {
+        todo!();
     }
 }
-
-// Memory Bank Controllers
-trait Mbc {}
 
 // --- UNIT TESTS BEGIN ---
 
@@ -275,7 +270,7 @@ mod tests {
 
             // ie
             let gb_mmu = GbMmu {
-                ie: [0x1C; IE_SIZE],
+                ie: 0x1C,
                 ..Default::default()
             };
             let addr = 0xFFFF;

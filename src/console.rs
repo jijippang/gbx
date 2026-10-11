@@ -21,7 +21,7 @@ pub trait Console {
 
     fn step(&mut self, cycles: u64);
     fn get_video_buffer(&self) -> &[u8];
-    fn load_cartridge(&mut self, file_path: &Path) -> io::Result<Cartridge>;
+    fn load_cartridge(&mut self, file_path: impl AsRef<Path>) -> Result<(), io::Error>;
     fn get_cycles_per_frame() -> u64 {
         (Self::CONSOLE_MASTER_CLK_FREQ / Self::CONSOLE_FPS).round() as u64
     }

@@ -758,8 +758,8 @@ impl Instruction {
                 let dst_bits = (opcode & 0x38) >> 3;
                 let src_bits = opcode & 0x07;
                 Ok(Self::LdR8FromR8 {
-                    dst: R8::from_byte(dst_bits)?,
-                    src: R8::from_byte(src_bits)?,
+                    dst: dst_bits.try_into()?,
+                    src: src_bits.try_into()?,
                 })
             }
 
@@ -821,8 +821,8 @@ mod tests {
             assert_eq!(
                 instr,
                 Instruction::LdR8FromR8 {
-                    dst: R8::from_byte(0b000).unwrap(),
-                    src: R8::from_byte(0b000).unwrap()
+                    dst: (0b000).try_into().unwrap(),
+                    src: (0b000).try_into().unwrap(),
                 }
             );
 
@@ -831,8 +831,8 @@ mod tests {
             assert_eq!(
                 instr,
                 Instruction::LdR8FromR8 {
-                    dst: R8::from_byte(0b010).unwrap(),
-                    src: R8::from_byte(0b101).unwrap()
+                    dst: (0b010).try_into().unwrap(),
+                    src: (0b101).try_into().unwrap(),
                 }
             );
 
@@ -841,8 +841,8 @@ mod tests {
             assert_eq!(
                 instr,
                 Instruction::LdR8FromR8 {
-                    dst: R8::from_byte(0b111).unwrap(),
-                    src: R8::from_byte(0b111).unwrap()
+                    dst: (0b111).try_into().unwrap(),
+                    src: (0b111).try_into().unwrap(),
                 }
             );
         }

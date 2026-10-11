@@ -33,8 +33,14 @@ enum R8 {
 }
 
 impl R8 {
-    fn from_byte(byte: u8) -> Result<Self, String> {
-        match byte {
+    // TODO: Fill out methods for R8 here
+}
+
+impl TryFrom<Data> for R8 {
+    type Error = String;
+
+    fn try_from(data: Data) -> Result<Self, Self::Error> {
+        match data {
             0b111 => Ok(Self::A),
             0b000 => Ok(Self::B),
             0b001 => Ok(Self::C),
@@ -42,7 +48,7 @@ impl R8 {
             0b011 => Ok(Self::E),
             0b100 => Ok(Self::H),
             0b101 => Ok(Self::L),
-            _ => Err(format!("Unknown byte: {:#010b}, cannot decode R8", byte)),
+            _ => Err(format!("Unknown byte: {:#010b}, cannot decode R8", data)),
         }
     }
 }
@@ -56,12 +62,18 @@ enum R16 {
 }
 
 impl R16 {
-    fn from_byte(byte: u8) -> Result<Self, String> {
-        match byte {
+    // TODO: Fill out methods for R16 here
+}
+
+impl TryFrom<Data> for R16 {
+    type Error = String;
+
+    fn try_from(data: Data) -> Result<Self, Self::Error> {
+        match data {
             0b00 => Ok(Self::BC),
             0b01 => Ok(Self::DE),
             0b10 => Ok(Self::HL),
-            _ => Err(format!("Unknown byte: {:#010b}, cannot decode R16", byte)),
+            _ => Err(format!("Unknown byte: {:#010b}, cannot decode R16", data)),
         }
     }
 }
@@ -349,38 +361,38 @@ mod tests {
         use super::*;
 
         #[test]
-        fn test_from_byte() {
+        fn test_try_from() {
             let byte = 0b11111_111;
-            let r8 = R8::from_byte(byte);
+            let r8 = R8::try_from(byte);
             assert!(r8.is_err());
 
             let byte = 0b00000_111;
-            let r8 = R8::from_byte(byte).unwrap();
-            assert_eq!(r8, R8::A);
+            let r8 = R8::try_from(byte);
+            assert_eq!(r8.unwrap(), R8::A);
 
             let byte = 0b00000_000;
-            let r8 = R8::from_byte(byte).unwrap();
-            assert_eq!(r8, R8::B);
+            let r8 = R8::try_from(byte);
+            assert_eq!(r8.unwrap(), R8::B);
 
             let byte = 0b00000_001;
-            let r8 = R8::from_byte(byte).unwrap();
-            assert_eq!(r8, R8::C);
+            let r8 = R8::try_from(byte);
+            assert_eq!(r8.unwrap(), R8::C);
 
             let byte = 0b00000_010;
-            let r8 = R8::from_byte(byte).unwrap();
-            assert_eq!(r8, R8::D);
+            let r8 = R8::try_from(byte);
+            assert_eq!(r8.unwrap(), R8::D);
 
             let byte = 0b00000_011;
-            let r8 = R8::from_byte(byte).unwrap();
-            assert_eq!(r8, R8::E);
+            let r8 = R8::try_from(byte);
+            assert_eq!(r8.unwrap(), R8::E);
 
             let byte = 0b00000_100;
-            let r8 = R8::from_byte(byte).unwrap();
-            assert_eq!(r8, R8::H);
+            let r8 = R8::try_from(byte);
+            assert_eq!(r8.unwrap(), R8::H);
 
             let byte = 0b00000_101;
-            let r8 = R8::from_byte(byte).unwrap();
-            assert_eq!(r8, R8::L);
+            let r8 = R8::try_from(byte);
+            assert_eq!(r8.unwrap(), R8::L);
         }
     }
 
@@ -388,22 +400,22 @@ mod tests {
         use super::*;
 
         #[test]
-        fn test_from_byte() {
+        fn test_try_from() {
             let byte = 0b111111_11;
-            let r16 = R16::from_byte(byte);
+            let r16 = R16::try_from(byte);
             assert!(r16.is_err());
 
             let byte = 0b000000_00;
-            let r16 = R16::from_byte(byte).unwrap();
-            assert_eq!(r16, R16::BC);
+            let r16 = R16::try_from(byte);
+            assert_eq!(r16.unwrap(), R16::BC);
 
             let byte = 0b000000_01;
-            let r16 = R16::from_byte(byte).unwrap();
-            assert_eq!(r16, R16::DE);
+            let r16 = R16::try_from(byte);
+            assert_eq!(r16.unwrap(), R16::DE);
 
             let byte = 0b000000_10;
-            let r16 = R16::from_byte(byte).unwrap();
-            assert_eq!(r16, R16::HL);
+            let r16 = R16::try_from(byte);
+            assert_eq!(r16.unwrap(), R16::HL);
         }
     }
 

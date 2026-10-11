@@ -1,4 +1,4 @@
-use crate::consoles::Console;
+use crate::console::Console;
 use tracing::{info, warn};
 
 type SpeedMultiplier = f64;
@@ -6,7 +6,7 @@ type SpeedMultiplier = f64;
 const MIN_EMU_SPD_MULT: SpeedMultiplier = 0.1;
 const MAX_EMU_SPD_MULT: SpeedMultiplier = 100.0;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub enum EmulatorSpeedPreset {
     // 0.1x
     Min,
@@ -14,6 +14,7 @@ pub enum EmulatorSpeedPreset {
     // 0.5x
     Half,
 
+    #[default]
     // 1.0x
     Normal,
 

@@ -3,6 +3,8 @@
 # Rust
 /target
 
+# ROMs
+/roms
 
 # Misc.
 journal.md

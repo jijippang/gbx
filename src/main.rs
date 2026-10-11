@@ -1,12 +1,12 @@
 use clap::{Parser, ValueEnum};
-use consoles::ConsoleModel;
-use consoles::gameboy::GameBoy;
+use console::gameboy::GameBoy;
+use console::{Console, ConsoleModel};
 use emulator::{Emulator, EmulatorSpeed, EmulatorSpeedPreset};
 use std::path::PathBuf;
 use tracing::{info, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
 
-mod consoles;
+mod console;
 mod emulator;
 
 #[derive(Debug, Default, Copy, Clone, ValueEnum)]
@@ -51,7 +51,7 @@ impl From<LevelFilter> for LogLevelFilter {
 struct Args {
     /// Path to the ROM file to load
     #[arg(short, long)]
-    rom_path: Option<PathBuf>,
+    rom_path: PathBuf,
 
     /// Which console model to emulate
     #[arg(short, long, value_enum, default_value_t = ConsoleModel::GameBoy)]
@@ -80,7 +80,7 @@ fn main() {
     info!("Starting GBX Emulator");
     info!("Log Level Filter: {}", log_level_filter);
 
-    let console = match args.console_model {
+    let mut console = match args.console_model {
         ConsoleModel::GameBoy => GameBoy::default(),
         // ConsoleModel::GameBoyColor => GameBoyColor::default(),
         // ConsoleModel::GameBoyAdvance => GameBoyAdvance::default(),
@@ -89,6 +89,7 @@ fn main() {
             args.console_model
         ),
     };
+    console.load_cartridge(&args.rom_path).unwrap();
 
     let mut emulator = Emulator::new(console, EmulatorSpeed::Preset(EmulatorSpeedPreset::Normal));
     // let mut emulator = Emulator::new(console, EmulatorSpeed::Custom(4.0));
