@@ -1,5 +1,7 @@
 use super::TCycles;
+use super::gb_cartridge::GbCartridge;
 use super::gb_mmu::{Address, Data, GbMmu};
+use super::gb_ppu::GbPpu;
 use instruction::Instruction;
 use tracing::{error, info, warn};
 
@@ -277,9 +279,6 @@ impl Registers {
 
 #[derive(Debug, Default)]
 pub struct GbCpu {
-    // 16-bit address space with a data size of 8-bits or in other words 64 KiB of memory to read and/or write data
-    memory: GbMmu,
-
     // 8, 8-bit registers which can be combined into 4, 16-bit registers if needed
     registers: Registers,
 
@@ -294,12 +293,17 @@ pub struct GbCpu {
 }
 
 impl GbCpu {
-    pub fn step(&mut self) -> TCycles {
+    pub fn step(
+        &mut self,
+        mmu: &mut GbMmu,
+        cartridge: &mut GbCartridge,
+        ppu: &mut GbPpu,
+    ) -> TCycles {
         // Fetch
-        let opcode = self.fetch();
+        let opcode = self.fetch(mmu, cartridge, ppu);
 
         // Decode
-        match Instruction::decode(opcode, self) {
+        match Instruction::decode(opcode, self, mmu, cartridge, ppu) {
             Ok(instr) => {
                 // Execute
                 self.execute(instr)
@@ -313,8 +317,8 @@ impl GbCpu {
         }
     }
 
-    fn fetch(&mut self) -> Data {
-        let data = self.memory.read(self.pc);
+    fn fetch(&mut self, mmu: &GbMmu, cartridge: &GbCartridge, ppu: &GbPpu) -> Data {
+        let data = mmu.read(self.pc, cartridge, ppu);
         self.pc = self.pc.wrapping_add(1);
         data.unwrap_or_else(|err| err.into())
     }

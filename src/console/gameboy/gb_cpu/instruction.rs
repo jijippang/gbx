@@ -1,4 +1,5 @@
 use super::{BitIdx, Condition, Data, GbCpu, R8, R16, RstVec};
+use super::{GbCartridge, GbMmu, GbPpu};
 
 #[derive(Debug, PartialEq)]
 pub enum Instruction {
@@ -750,7 +751,13 @@ pub enum Instruction {
 
 impl Instruction {
     #[inline]
-    pub fn decode(opcode: Data, cpu: &mut GbCpu) -> Result<Self, String> {
+    pub fn decode(
+        opcode: Data,
+        cpu: &mut GbCpu,
+        mmu: &GbMmu,
+        cartridge: &GbCartridge,
+        ppu: &GbPpu,
+    ) -> Result<Self, String> {
         match opcode {
             0x40..=0x7F => {
                 // To decode the dst and src registers, extract out the corresponding 3 bits each from the
@@ -775,7 +782,7 @@ impl Instruction {
             0xCB => {
                 // For the 0xCB prefixed instructions, fetch the second byte which is the 0xCB
                 // prefixed opcode and then decode that opcode
-                let cb_opcode = cpu.fetch();
+                let cb_opcode = cpu.fetch(mmu, cartridge, ppu);
                 Self::decode_cb(cb_opcode, cpu)
             }
 
@@ -811,13 +818,16 @@ mod tests {
         #[test]
         fn test_decode() {
             let mut cpu = GbCpu::default();
+            let mmu = GbMmu::default();
+            let cartridge = GbCartridge::default();
+            let ppu = GbPpu::default();
 
             let byte = 0b11_111_111;
-            let instr = Instruction::decode(byte, &mut cpu);
+            let instr = Instruction::decode(byte, &mut cpu, &mmu, &cartridge, &ppu);
             assert!(instr.is_err());
 
             let byte = 0b01_000_000;
-            let instr = Instruction::decode(byte, &mut cpu).unwrap();
+            let instr = Instruction::decode(byte, &mut cpu, &mmu, &cartridge, &ppu).unwrap();
             assert_eq!(
                 instr,
                 Instruction::LdR8FromR8 {
@@ -827,7 +837,7 @@ mod tests {
             );
 
             let byte = 0b01_010_101;
-            let instr = Instruction::decode(byte, &mut cpu).unwrap();
+            let instr = Instruction::decode(byte, &mut cpu, &mmu, &cartridge, &ppu).unwrap();
             assert_eq!(
                 instr,
                 Instruction::LdR8FromR8 {
@@ -837,7 +847,7 @@ mod tests {
             );
 
             let byte = 0b01_111_111;
-            let instr = Instruction::decode(byte, &mut cpu).unwrap();
+            let instr = Instruction::decode(byte, &mut cpu, &mmu, &cartridge, &ppu).unwrap();
             assert_eq!(
                 instr,
                 Instruction::LdR8FromR8 {

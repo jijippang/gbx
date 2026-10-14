@@ -1,4 +1,7 @@
-use super::{Address, Data, mbc::Mbc};
+use super::gb_mmu::{Address, Data, MemoryReadError, MemoryWriteError};
+use mbc::Mbc;
+
+mod mbc;
 
 const MBC_TYPE_ADDR: Address = 0x0147;
 const MIN_CARTRIDGE_SIZE: usize = 32768;
@@ -91,11 +94,9 @@ enum NewLicenseeCode {
     Kodansha,
 }
 
-// impl TryFrom<&[Data; 2]> for NewLicenseeCode {
 impl TryFrom<&[Data]> for NewLicenseeCode {
     type Error = String;
 
-    // fn try_from(data: &[Data; 2]) -> Result<Self, Self::Error> {
     fn try_from(data: &[Data]) -> Result<Self, Self::Error> {
         match data {
             b"00" => Ok(Self::None),
@@ -367,9 +368,7 @@ impl CartridgeHeader {
     }
 }
 
-// impl From<&[Data; CARTRIDGE_HEADER_SIZE]> for CartridgeHeader {
 impl From<&[Data]> for CartridgeHeader {
-    // fn from(data: &[Data; CARTRIDGE_HEADER_SIZE]) -> Self {
     fn from(data: &[Data]) -> Self {
         Self {
             entry_point: data[0x0000..=ENTRY_POINT_SIZE]
@@ -423,24 +422,34 @@ impl Default for CartridgeHeader {
 }
 
 #[derive(Debug, Default)]
-struct Cartridge<T: Mbc> {
+pub struct GbCartridge {
     header: CartridgeHeader,
-    rom_data: Vec<Data>,
-    ram_data: Vec<Data>,
-    mbc: T,
+    mbc: Mbc,
 }
 
-impl<T: Mbc> Cartridge<T> {
-    // TODO: Fill out methods for Cartridge here
+impl GbCartridge {
+    // TODO: Fill out methods for GbCartridge here
+
+    pub fn read(&self, addr: Address) -> Result<Data, MemoryReadError> {
+        todo!();
+    }
+
+    pub fn write(&mut self, addr: Address, data: Data) -> Result<(), MemoryWriteError> {
+        todo!();
+    }
+
+    pub fn reset(&mut self) {
+        todo!();
+    }
 }
 
 #[derive(Debug)]
-enum CartridgeError {
+pub enum CartridgeError {
     // Cartridge memory size is smaller than the minimum (32 KiB)
     TooSmall(usize),
 }
 
-impl<T: Mbc + Default> TryFrom<&[Data]> for Cartridge<T> {
+impl TryFrom<&[Data]> for GbCartridge {
     type Error = CartridgeError;
 
     fn try_from(data: &[Data]) -> Result<Self, Self::Error> {

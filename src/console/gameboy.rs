@@ -1,5 +1,6 @@
-use super::{Cartridge, Console};
+use super::Console;
 use gb_apu::GbApu;
+use gb_cartridge::GbCartridge;
 use gb_cpu::GbCpu;
 use gb_mmu::GbMmu;
 use gb_ppu::GbPpu;
@@ -9,6 +10,7 @@ use std::path::Path;
 use tracing::info;
 
 mod gb_apu;
+mod gb_cartridge;
 mod gb_cpu;
 mod gb_mmu;
 mod gb_ppu;
@@ -21,8 +23,8 @@ pub struct GameBoy {
     apu: GbApu,
     cpu: GbCpu,
     ppu: GbPpu,
-    // TODO: Change this into a Rc<RefCell<GbMmu>> later for sharing the MMU with the other components
     mmu: GbMmu,
+    cartridge: GbCartridge,
 
     // Keeps track of how many TCycles the CPU has stepped beyond the frame boundary
     // This is necessary in order to keep an accurate time-sync between the rest of the components and the CPU
@@ -42,7 +44,9 @@ impl Console for GameBoy {
         self.catch_up_cycles = 0;
 
         while remaining_cycles > 0 {
-            let t_cycles = self.cpu.step();
+            let t_cycles = self
+                .cpu
+                .step(&mut self.mmu, &mut self.cartridge, &mut self.ppu);
 
             // Check if the number of t-cycles the CPU took was more than the cycles we have remaining in this frame
             match remaining_cycles.checked_sub(t_cycles) {
@@ -71,17 +75,19 @@ impl Console for GameBoy {
             "Attempting to load cartridge from: {}",
             file_path.as_ref().display()
         );
-        let cartridge = fs::read(file_path)?;
+        let cartridge_data = fs::read(file_path)?;
 
+        // TODO: Perhaps think about moving this validation into the TryFrom trait for the GbCartridge struct
         // Validate cartridge size
-        if !Self::CONSOLE_CART_SIZES.contains(&cartridge.len()) {
+        if !Self::CONSOLE_CART_SIZES.contains(&cartridge_data.len()) {
             Err(io::Error::other(format!(
                 "Cartridge size: {}, is not one of the allowed cartridge sizes: {:?}",
-                cartridge.len(),
+                cartridge_data.len(),
                 Self::CONSOLE_CART_SIZES
             )))
         } else {
-            self.mmu.load_cartridge(&cartridge);
+            // TODO: Find a better way to handle the Result other than an unwrap()
+            self.cartridge = cartridge_data.as_slice().try_into().unwrap();
             Ok(())
         }
     }

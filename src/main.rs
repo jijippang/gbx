@@ -94,5 +94,4 @@ fn main() {
     let mut emulator = Emulator::new(console, EmulatorSpeed::Preset(EmulatorSpeedPreset::Normal));
     // let mut emulator = Emulator::new(console, EmulatorSpeed::Custom(4.0));
     emulator.run();
-    // println!("{:?}", emulator);
 }

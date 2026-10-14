@@ -4,8 +4,6 @@ use std::path::Path;
 
 pub mod gameboy;
 
-type Cartridge = Vec<u8>;
-
 #[derive(Debug, Default, Copy, Clone, ValueEnum)]
 pub enum ConsoleModel {
     #[default]
