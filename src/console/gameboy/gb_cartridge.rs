@@ -103,7 +103,7 @@ impl TryFrom<&[Data]> for NewLicenseeCode {
             b"01" => Ok(Self::NintendoResearchAndDevelopment1),
             // TODO: Handle the rest of the enum variants here
             _ => Err(format!(
-                "Unknown code: {:#X?}, unable to marshal into NewLicenseeCode",
+                "Unknown code: {:#X?}, unable to deserialize into NewLicenseeCode",
                 data
             )),
         }
@@ -143,7 +143,7 @@ impl TryFrom<Data> for CartridgeType {
             0x01 => Ok(Self::Mbc1),
             // TODO: Handle the rest of the enum variants here
             _ => Err(format!(
-                "Unknown code: {:#X}, unable to marshal into CartridgeType",
+                "Unknown code: {:#X}, unable to deserialize into CartridgeType",
                 data
             )),
         }
@@ -208,7 +208,7 @@ impl TryFrom<Data> for RomSize {
             0x53 => Ok(Self::Size1_2MiB),
             0x54 => Ok(Self::Size1_5MiB),
             _ => Err(format!(
-                "Unknown code: {:#X}, unable to marshal into RomSize",
+                "Unknown code: {:#X}, unable to deserialize into RomSize",
                 data
             )),
         }
@@ -249,7 +249,7 @@ impl TryFrom<Data> for RamSize {
             0x04 => Ok(Self::Size128KiB),
             0x05 => Ok(Self::Size64KiB),
             _ => Err(format!(
-                "Unknown code: {:#X}, unable to marshal into RamSize",
+                "Unknown code: {:#X}, unable to deserialize into RamSize",
                 data
             )),
         }
@@ -271,7 +271,7 @@ impl TryFrom<Data> for DestinationCode {
             0x00 => Ok(Self::JapanAndOverseas),
             0x01 => Ok(Self::OverseasOnly),
             _ => Err(format!(
-                "Unknown code: {:#X}, unable to marshal into DestinationCode",
+                "Unknown code: {:#X}, unable to deserialize into DestinationCode",
                 data
             )),
         }
@@ -295,7 +295,7 @@ impl TryFrom<Data> for OldLicenseeCode {
             0x01 => Ok(Self::Nintendo),
             // TODO: Handle the rest of the enum variants here
             _ => Err(format!(
-                "Unknown code: {:#X}, unable to marshal into OldLicenseeCode",
+                "Unknown code: {:#X}, unable to deserialize into OldLicenseeCode",
                 data
             )),
         }
@@ -351,50 +351,90 @@ struct CartridgeHeader {
 }
 
 impl CartridgeHeader {
+    fn parse_entry_point(data: &[Data]) -> [Data; ENTRY_POINT_SIZE] {
+        data.try_into()
+            .unwrap_or_else(|_| panic!("Entry point must be {} bytes long", ENTRY_POINT_SIZE))
+    }
+
+    fn parse_logo(data: &[Data]) -> [Data; LOGO_SIZE] {
+        data.try_into()
+            .unwrap_or_else(|_| panic!("Logo must be {} bytes long", LOGO_SIZE))
+    }
+
     fn parse_title(data: &[Data]) -> String {
-        // Find the first index where the byte is 0x00 all bytes after that are assumed to be 0x00
-        // let end_idx = data.iter().position(|&byte| byte == 0x00).unwrap_or(data.len());
-
-        // std::str::from_utf8(&data[..end_idx])
-        //     .map(|result| result.to_string())
-        //     .unwrap_or_else(|_| data[..end_idx].iter().map(|&byte| byte as char).collect())
-
-        // String::from_utf8_lossy(&data[..end_idx]).into_owned()
-
         // Titles are null padded
         String::from_utf8_lossy(data)
             .trim_end_matches(char::from(0x00))
             .to_owned()
+    }
+
+    fn parse_manufacturer_code(data: &[Data]) -> Option<String> {
+        todo!()
+    }
+
+    fn parse_cgb_flag(data: Data) -> CgbFlag {
+        todo!()
+    }
+
+    fn parse_new_licensee_code(data: &[Data]) -> Option<NewLicenseeCode> {
+        todo!()
+    }
+
+    fn parse_sgb_flag(data: Data) -> SgbFlag {
+        todo!()
+    }
+
+    fn parse_cartridge_type(data: Data) -> CartridgeType {
+        todo!()
+    }
+
+    fn parse_rom_size(data: Data) -> RomSize {
+        todo!()
+    }
+
+    fn parse_ram_size(data: Data) -> RamSize {
+        todo!()
+    }
+
+    fn parse_destination_code(data: Data) -> DestinationCode {
+        todo!()
+    }
+
+    fn parse_old_licensee_code(data: Data) -> OldLicenseeCode {
+        todo!()
+    }
+
+    fn parse_version_number(data: Data) -> Data {
+        todo!()
+    }
+
+    fn parse_header_checksum(data: Data) -> Data {
+        todo!()
+    }
+
+    fn parse_global_checksum(data: &[Data]) -> u16 {
+        todo!()
     }
 }
 
 impl From<&[Data]> for CartridgeHeader {
     fn from(data: &[Data]) -> Self {
         Self {
-            entry_point: data[0x0000..=ENTRY_POINT_SIZE]
-                .try_into()
-                .unwrap_or_else(|_| {
-                    panic!(
-                        "Entry point must be at least {} bytes long",
-                        ENTRY_POINT_SIZE
-                    )
-                }),
-            logo: data[ENTRY_POINT_SIZE..=(ENTRY_POINT_SIZE + LOGO_SIZE)]
-                .try_into()
-                .unwrap_or_else(|_| panic!("Logo must be at least {} bytes long", LOGO_SIZE)),
+            entry_point: Self::parse_entry_point(&data[0x0000..ENTRY_POINT_SIZE]),
+            logo: Self::parse_logo(&data[ENTRY_POINT_SIZE..(ENTRY_POINT_SIZE + LOGO_SIZE)]),
             title: Self::parse_title(&data[0x0034..=0x0043]),
-            manufacturer_code: todo!(),
-            cgb_flag: todo!(),
-            new_licensee_code: todo!(),
-            sgb_flag: todo!(),
-            cartridge_type: todo!(),
-            rom_size: todo!(),
-            ram_size: todo!(),
-            destination_code: todo!(),
-            old_licensee_code: todo!(),
-            version_number: todo!(),
-            header_checksum: todo!(),
-            global_checksum: todo!(),
+            manufacturer_code: Self::parse_manufacturer_code(),
+            cgb_flag: Self::parse_cgb_flag(),
+            new_licensee_code: Self::parse_new_licensee_code(),
+            sgb_flag: Self::parse_sgb_flag(),
+            cartridge_type: Self::parse_cartridge_type(),
+            rom_size: Self::parse_rom_size(),
+            ram_size: Self::parse_ram_size(),
+            destination_code: Self::parse_destination_code(),
+            old_licensee_code: Self::parse_old_licensee_code(),
+            version_number: Self::parse_version_number(),
+            header_checksum: Self::parse_header_checksum(),
+            global_checksum: Self::parse_global_checksum(),
         }
     }
 }
