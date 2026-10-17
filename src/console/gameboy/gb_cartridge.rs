@@ -1,4 +1,5 @@
-use super::gb_mmu::{Address, Data, MemoryReadError, MemoryWriteError};
+use super::gb_mmu::{MemoryReadError, MemoryWriteError};
+use crate::common::gameboy::memory::types::{Address, Data};
 use mbc::Mbc;
 use tracing::info;
 

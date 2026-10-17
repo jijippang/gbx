@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use tracing::{info, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
 
+mod common;
 mod console;
 mod emulator;
 
