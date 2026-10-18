@@ -1,6 +1,8 @@
 use super::gb_mmu::{MemoryReadError, MemoryWriteError};
+use crate::common::gameboy::memory::address_range::AddressRange;
 use crate::common::gameboy::memory::types::{Address, Data};
 use mbc::Mbc;
+use std::ops::RangeInclusive;
 use tracing::info;
 
 mod mbc;
@@ -720,13 +722,41 @@ impl CartridgeHeader {
 
 impl From<&[Data]> for CartridgeHeader {
     fn from(data: &[Data]) -> Self {
+        let entry_point_addr_range: RangeInclusive<usize> = AddressRange::FullInclusive {
+            lower: 0x0100,
+            upper: 0x0103,
+        }
+        .checked_sub(CARTRIDGE_HEADER_START_ADDR)
+        .expect("Address Range Error")
+        .into();
+
+        let logo_addr_range: RangeInclusive<usize> = AddressRange::FullInclusive {
+            lower: 0x0104,
+            upper: 0x0133,
+        }
+        .checked_sub(CARTRIDGE_HEADER_START_ADDR)
+        .expect("Address Range Error")
+        .into();
+
+        let title_addr_range: RangeInclusive<usize> = AddressRange::FullInclusive {
+            lower: 0x0134,
+            upper: 0x0143,
+        }
+        .checked_sub(CARTRIDGE_HEADER_START_ADDR)
+        .expect("Address Range Error")
+        .into();
+
+        let old_licensee_code_addr_range: usize = AddressRange::Single { addr: 0x014B }
+            .checked_sub(CARTRIDGE_HEADER_START_ADDR)
+            .expect("Address Range Error")
+            .lower()
+            .into();
+
         Self {
-            old_licensee_code: Self::parse_old_licensee_code(
-                data[(0x014B - CARTRIDGE_HEADER_START_ADDR) as usize],
-            ),
-            entry_point: Self::parse_entry_point(&data[0x0000..=0x0003]),
-            logo: Self::parse_logo(&data[ENTRY_POINT_SIZE..(ENTRY_POINT_SIZE + LOGO_SIZE)]),
-            title: Self::parse_title(&data[0x0034..=0x0043]),
+            old_licensee_code: Self::parse_old_licensee_code(data[old_licensee_code_addr_range]),
+            entry_point: Self::parse_entry_point(&data[entry_point_addr_range]),
+            logo: Self::parse_logo(&data[logo_addr_range]),
+            title: Self::parse_title(&data[title_addr_range]),
 
             // TODO: Finish implementing the rest of the parsing for the members
             manufacturer_code: Self::parse_manufacturer_code(data),
