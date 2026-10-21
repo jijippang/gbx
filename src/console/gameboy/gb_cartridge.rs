@@ -7,12 +7,11 @@ use tracing::info;
 
 mod mbc;
 
-const MBC_TYPE_ADDR: Address = 0x0147;
 const MIN_CARTRIDGE_SIZE: usize = 32768;
-const CARTRIDGE_HEADER_SIZE: usize = 0x014F - 0x0100 + 1;
 const CARTRIDGE_HEADER_START_ADDR: Address = 0x0100;
 const ENTRY_POINT_SIZE: usize = 0x0103 - 0x0100 + 1;
 const LOGO_SIZE: usize = 0x0133 - 0x0104 + 1;
+const GLOBAL_CHECKSUM_SIZE: usize = 0x014F - 0x014E + 1;
 
 #[derive(Debug, Default)]
 enum CgbFlag {
@@ -816,10 +815,13 @@ impl CartridgeHeader {
     }
 
     fn parse_global_checksum(data: &[Data]) -> u16 {
-        u16::from_be_bytes(
-            data.try_into()
-                .expect("Global checksum data is not exactly 2 bytes"),
-        )
+        u16::from_be_bytes(data.try_into().unwrap_or_else(|_| {
+            panic!(
+                "Data was {} bytes long, global checksum must be {} bytes long",
+                data.len(),
+                GLOBAL_CHECKSUM_SIZE
+            )
+        }))
     }
 }
 

@@ -1,4 +1,3 @@
-use super::gb_ppu::{OAM_SIZE, VRAM_SIZE};
 use super::{GbCartridge, GbPpu};
 use crate::common::gameboy::memory::types::{Address, Data};
 use std::error::Error;
@@ -6,8 +5,6 @@ use std::fmt;
 use tracing::warn;
 
 const OPEN_BUS: Data = 0xFF;
-const ROM_SIZE: usize = 0x7FFF - 0x0000 + 1;
-const EXTRAM_SIZE: usize = 0xBFFF - 0xA000 + 1;
 const WRAM_SIZE: usize = 0xDFFF - 0xC000 + 1;
 const IO_SIZE: usize = 0xFF7F - 0xFF00 + 1;
 const HRAM_SIZE: usize = 0xFFFE - 0xFF80 + 1;
