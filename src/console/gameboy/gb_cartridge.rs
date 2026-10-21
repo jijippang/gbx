@@ -1,28 +1,37 @@
-use super::gb_mmu::{Address, Data, MemoryReadError, MemoryWriteError};
+use super::gb_mmu::{MemoryReadError, MemoryWriteError};
+use crate::common::gameboy::memory::address_range::AddressRange;
+use crate::common::gameboy::memory::types::{Address, Data};
 use mbc::Mbc;
+use std::{fmt, ops::RangeInclusive};
 use tracing::info;
 
 mod mbc;
 
-const MBC_TYPE_ADDR: Address = 0x0147;
 const MIN_CARTRIDGE_SIZE: usize = 32768;
-const CARTRIDGE_HEADER_SIZE: usize = 0x014F - 0x0100 + 1;
 const CARTRIDGE_HEADER_START_ADDR: Address = 0x0100;
 const ENTRY_POINT_SIZE: usize = 0x0103 - 0x0100 + 1;
 const LOGO_SIZE: usize = 0x0133 - 0x0104 + 1;
+const GLOBAL_CHECKSUM_SIZE: usize = 0x014F - 0x014E + 1;
 
 #[derive(Debug, Default)]
 enum CgbFlag {
+    // Strict monochrome mode, no color features are supported
     #[default]
+    Dmg,
+
+    // Supports color features but also backwards compatible with monochrome mode
     CgbEnhanced,
+
+    // Only supports color features, will not boot on the original DMG
     CgbOnly,
 }
 
 impl From<Data> for CgbFlag {
     fn from(data: Data) -> Self {
         match data {
+            0x80 => Self::CgbEnhanced,
             0xC0 => Self::CgbOnly,
-            _ => Self::CgbEnhanced,
+            _ => Self::Dmg,
         }
     }
 }
@@ -33,7 +42,7 @@ enum NewLicenseeCode {
     None,
     NintendoResearchAndDevelopment1,
     Capcom,
-    ElectronicArts,
+    Ea,
     HudsonSoft,
     BAi,
     Kss,
@@ -49,7 +58,6 @@ enum NewLicenseeCode {
     Konami,
     HectorSoft,
     Taito,
-    // HudsonSoft,
     Banpresto,
     Ubisoft,
     Atlus,
@@ -61,7 +69,6 @@ enum NewLicenseeCode {
     AcclaimEntertainment,
     Activision,
     SammyUsaCorporation,
-    // Konami,
     HiTechExpressions,
     Ljn,
     Matchbox,
@@ -71,7 +78,6 @@ enum NewLicenseeCode {
     VirginGamesLtd,
     LucasfilmGames,
     OceanSoftware,
-    // ElectronicArts,
     Infogrames,
     InterplayEntertainment,
     Broderbund,
@@ -83,9 +89,8 @@ enum NewLicenseeCode {
     LozcG,
     TokumaShoten,
     TsukudaOriginal,
-    Chunsoft,
+    ChunsoftCo,
     VideoSystem,
-    // OceanSoftwareAcclaimEntertainment,
     Varie,
     Yonezawa,
     Kaneko,
@@ -103,7 +108,68 @@ impl TryFrom<&[Data]> for NewLicenseeCode {
         match data {
             b"00" => Ok(Self::None),
             b"01" => Ok(Self::NintendoResearchAndDevelopment1),
-            // TODO: Handle the rest of the enum variants here
+            b"08" => Ok(Self::Capcom),
+            b"13" => Ok(Self::Ea),
+            b"18" => Ok(Self::HudsonSoft),
+            b"19" => Ok(Self::BAi),
+            b"20" => Ok(Self::Kss),
+            b"22" => Ok(Self::PlanningOfficeWada),
+            b"24" => Ok(Self::PcmComplete),
+            b"25" => Ok(Self::SanX),
+            b"28" => Ok(Self::Kemco),
+            b"29" => Ok(Self::SetaCorporation),
+            b"30" => Ok(Self::Viacom),
+            b"31" => Ok(Self::Nintendo),
+            b"32" => Ok(Self::Bandai),
+            b"33" => Ok(Self::OceanSoftwareAcclaimEntertainment),
+            b"34" => Ok(Self::Konami),
+            b"35" => Ok(Self::HectorSoft),
+            b"37" => Ok(Self::Taito),
+            b"38" => Ok(Self::HudsonSoft),
+            b"39" => Ok(Self::Banpresto),
+            b"41" => Ok(Self::Ubisoft),
+            b"42" => Ok(Self::Atlus),
+            b"44" => Ok(Self::MalibuInteractive),
+            b"46" => Ok(Self::Angel),
+            b"47" => Ok(Self::BulletProofSoftware),
+            b"49" => Ok(Self::Irem),
+            b"50" => Ok(Self::Absolute),
+            b"51" => Ok(Self::AcclaimEntertainment),
+            b"52" => Ok(Self::Activision),
+            b"53" => Ok(Self::SammyUsaCorporation),
+            b"54" => Ok(Self::Konami),
+            b"55" => Ok(Self::HiTechExpressions),
+            b"56" => Ok(Self::Ljn),
+            b"57" => Ok(Self::Matchbox),
+            b"58" => Ok(Self::Mattel),
+            b"59" => Ok(Self::MiltonBradleyCompany),
+            b"60" => Ok(Self::TitusInteractive),
+            b"61" => Ok(Self::VirginGamesLtd),
+            b"64" => Ok(Self::LucasfilmGames),
+            b"67" => Ok(Self::OceanSoftware),
+            b"69" => Ok(Self::Ea),
+            b"70" => Ok(Self::Infogrames),
+            b"71" => Ok(Self::InterplayEntertainment),
+            b"72" => Ok(Self::Broderbund),
+            b"73" => Ok(Self::SculpturedSoftware),
+            b"75" => Ok(Self::TheSalesCurveLimited),
+            b"78" => Ok(Self::Thq),
+            b"79" => Ok(Self::Accolade),
+            b"80" => Ok(Self::MisawaEntertainment),
+            b"83" => Ok(Self::LozcG),
+            b"86" => Ok(Self::TokumaShoten),
+            b"87" => Ok(Self::TsukudaOriginal),
+            b"91" => Ok(Self::ChunsoftCo),
+            b"92" => Ok(Self::VideoSystem),
+            b"93" => Ok(Self::OceanSoftwareAcclaimEntertainment),
+            b"95" => Ok(Self::Varie),
+            b"96" => Ok(Self::Yonezawa),
+            b"97" => Ok(Self::Kaneko),
+            b"99" => Ok(Self::PackInVideo),
+            b"9H" => Ok(Self::BottomUp),
+            b"A4" => Ok(Self::KonamiYuGiOh),
+            b"BL" => Ok(Self::Mto),
+            b"DK" => Ok(Self::Kodansha),
             _ => Err(format!(
                 "Unknown data: {:#X?}, unable to deserialize into NewLicenseeCode",
                 data
@@ -114,9 +180,9 @@ impl TryFrom<&[Data]> for NewLicenseeCode {
 
 #[derive(Debug, Default)]
 enum SgbFlag {
-    SgbSupported,
     #[default]
     SgbUnsupported,
+    SgbSupported,
 }
 
 impl From<Data> for SgbFlag {
@@ -133,7 +199,32 @@ enum CartridgeType {
     #[default]
     RomOnly,
     Mbc1,
-    // TODO: Fill out the rest of the enum variants here
+    Mbc1Ram,
+    Mbc1RamBattery,
+    Mbc2,
+    Mbc2Battery,
+    RomRam,
+    RomRamBattery,
+    Mmm01,
+    Mmm01Ram,
+    Mmm01RamBattery,
+    Mbc3TimerBattery,
+    Mbc3TimerRamBattery,
+    Mbc3,
+    Mbc3Ram,
+    Mbc3RamBattery,
+    Mbc5,
+    Mbc5Ram,
+    Mbc5RamBattery,
+    Mbc5Rumble,
+    Mbc5RumbleRam,
+    Mbc5RumbleRamBattery,
+    Mbc6,
+    Mbc7SensorRumbleRamBattery,
+    PocketCamera,
+    BandaiTama5,
+    HuC3,
+    HuC1RamBattery,
 }
 
 impl TryFrom<Data> for CartridgeType {
@@ -143,7 +234,32 @@ impl TryFrom<Data> for CartridgeType {
         match data {
             0x00 => Ok(Self::RomOnly),
             0x01 => Ok(Self::Mbc1),
-            // TODO: Handle the rest of the enum variants here
+            0x02 => Ok(Self::Mbc1Ram),
+            0x03 => Ok(Self::Mbc1RamBattery),
+            0x05 => Ok(Self::Mbc2),
+            0x06 => Ok(Self::Mbc2Battery),
+            0x08 => Ok(Self::RomRam),
+            0x09 => Ok(Self::RomRamBattery),
+            0x0B => Ok(Self::Mmm01),
+            0x0C => Ok(Self::Mmm01Ram),
+            0x0D => Ok(Self::Mmm01RamBattery),
+            0x0F => Ok(Self::Mbc3TimerBattery),
+            0x10 => Ok(Self::Mbc3TimerRamBattery),
+            0x11 => Ok(Self::Mbc3),
+            0x12 => Ok(Self::Mbc3Ram),
+            0x13 => Ok(Self::Mbc3RamBattery),
+            0x19 => Ok(Self::Mbc5),
+            0x1A => Ok(Self::Mbc5Ram),
+            0x1B => Ok(Self::Mbc5RamBattery),
+            0x1C => Ok(Self::Mbc5Rumble),
+            0x1D => Ok(Self::Mbc5RumbleRam),
+            0x1E => Ok(Self::Mbc5RumbleRamBattery),
+            0x20 => Ok(Self::Mbc6),
+            0x22 => Ok(Self::Mbc7SensorRumbleRamBattery),
+            0xFC => Ok(Self::PocketCamera),
+            0xFD => Ok(Self::BandaiTama5),
+            0xFE => Ok(Self::HuC3),
+            0xFF => Ok(Self::HuC1RamBattery),
             _ => Err(format!(
                 "Unknown data: {:#X}, unable to deserialize into CartridgeType",
                 data
@@ -301,12 +417,10 @@ enum OldLicenseeCode {
     Kemco,
     SetaCorporation,
     Infogrames,
-    // Nintendo,
     Bandai,
     NewLicenseeCode,
     Konami,
     HectorSoft,
-    // Capcom,
     Banpresto,
     EntertainmentInteractive,
     Gremlin,
@@ -316,8 +430,6 @@ enum OldLicenseeCode {
     Angel,
     SpectrumHoloByte,
     Irem,
-    // VirginGames,
-    // MalibuInteractive,
     UsGold,
     Absolute,
     AcclaimEntertainment,
@@ -333,12 +445,8 @@ enum OldLicenseeCode {
     NaxatSoft,
     Tradewest,
     TitusInteractive,
-    // VirginGames,
     OceanSoftware,
-    // Ea,
-    // EliteSystems,
     ElectroBrain,
-    // Infogrames,
     InterplayEntertainment,
     Broderbund,
     SculpturedSoftware,
@@ -347,7 +455,6 @@ enum OldLicenseeCode {
     Accolade,
     TriffixEntertainment,
     MicroProse,
-    // Kemco,
     MisawaEntertainment,
     LozcG,
     TokumaShoten,
@@ -360,26 +467,19 @@ enum OldLicenseeCode {
     TsubarayaProductions,
     Varie,
     Yonezawa,
-    // Kemco,
     Arc,
     NihonBussan,
     Tecmo,
     Imagineer,
-    // Banpresto,
     Nova,
     HoriElectric,
-    // Bandai,
-    // Konami,
     Kawada,
     Takara,
     TechnosJapan,
-    // Broderbund,
     ToeiAnimation,
     Toho,
     Namco,
-    // AcclaimEntertainment,
     AsciiCorporation,
-    // Bandai,
     SquareEnix,
     HalLaboratory,
     Snk,
@@ -387,11 +487,8 @@ enum OldLicenseeCode {
     CultureBrain,
     Sunsoft,
     SonyImagesoft,
-    // SammyCorporation,
     Taito,
-    // Kemco,
     Square,
-    // TokumaShoten,
     DataEast,
     TonkinHouse,
     Koei,
@@ -400,36 +497,26 @@ enum OldLicenseeCode {
     VapInc,
     UseCorporation,
     Meldac,
-    // PonyCanyon,
-    // Angel,
-    // Taito,
     Sofel,
     Quest,
     SigmaEnterprises,
     AskKodanshaCo,
-    // NaxatSoft,
     CopyaSystem,
-    // Banpresto,
     Tomy,
-    // Ljn,
     NipponComputerSystems,
     HumanEnt,
     Altron,
-    // Jaleco,
     TowaChiki,
     Yutaka,
-    // Varie,
     Epoch,
     Athena,
     AsmikAceEntertainment,
     Natsume,
     KingRecords,
-    // Atlus,
     SonyRecords,
     Igs,
     AWave,
     ExtremeEntertainment,
-    // Ljn,
 }
 
 impl TryFrom<Data> for OldLicenseeCode {
@@ -668,36 +755,51 @@ impl CartridgeHeader {
             .to_owned()
     }
 
-    fn parse_manufacturer_code(data: &[Data]) -> Option<String> {
-        todo!()
+    fn parse_manufacturer_code(data: &[Data], cgb_flag: &CgbFlag) -> Option<String> {
+        match cgb_flag {
+            CgbFlag::CgbEnhanced | CgbFlag::CgbOnly => Some(
+                String::from_utf8_lossy(data)
+                    .trim_end_matches(char::from(0x00))
+                    .to_owned(),
+            ),
+            _ => None,
+        }
     }
 
     fn parse_cgb_flag(data: Data) -> CgbFlag {
-        todo!()
+        data.into()
     }
 
-    fn parse_new_licensee_code(data: &[Data]) -> Option<NewLicenseeCode> {
-        todo!()
+    fn parse_new_licensee_code(
+        data: &[Data],
+        old_licensee_code: &OldLicenseeCode,
+    ) -> Option<NewLicenseeCode> {
+        match old_licensee_code {
+            OldLicenseeCode::NewLicenseeCode => {
+                Some(data.try_into().unwrap_or_else(|err| panic!("{}", err)))
+            }
+            _ => None,
+        }
     }
 
     fn parse_sgb_flag(data: Data) -> SgbFlag {
-        todo!()
+        data.into()
     }
 
     fn parse_cartridge_type(data: Data) -> CartridgeType {
-        todo!()
+        data.try_into().unwrap_or_else(|err| panic!("{}", err))
     }
 
     fn parse_rom_size(data: Data) -> RomSize {
-        todo!()
+        data.try_into().unwrap_or_else(|err| panic!("{}", err))
     }
 
     fn parse_ram_size(data: Data) -> RamSize {
-        todo!()
+        data.try_into().unwrap_or_else(|err| panic!("{}", err))
     }
 
     fn parse_destination_code(data: Data) -> DestinationCode {
-        todo!()
+        data.try_into().unwrap_or_else(|err| panic!("{}", err))
     }
 
     fn parse_old_licensee_code(data: Data) -> OldLicenseeCode {
@@ -705,40 +807,183 @@ impl CartridgeHeader {
     }
 
     fn parse_version_number(data: Data) -> Data {
-        todo!()
+        data
     }
 
     fn parse_header_checksum(data: Data) -> Data {
-        todo!()
+        data
     }
 
     fn parse_global_checksum(data: &[Data]) -> u16 {
-        todo!()
+        u16::from_be_bytes(data.try_into().unwrap_or_else(|_| {
+            panic!(
+                "Data was {} bytes long, global checksum must be {} bytes long",
+                data.len(),
+                GLOBAL_CHECKSUM_SIZE
+            )
+        }))
+    }
+}
+
+impl fmt::Display for CartridgeHeader {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Cartridge Header:")?;
+        writeln!(f, "entry_point: {:?}", self.entry_point)?;
+        writeln!(f, "logo: {:?}", self.logo)?;
+        writeln!(f, "title: {:?}", self.title)?;
+        writeln!(f, "cgb_flag: {:?}", self.cgb_flag)?;
+        writeln!(f, "manufacturer_code: {:?}", self.manufacturer_code)?;
+        writeln!(f, "old_licensee_code: {:?}", self.old_licensee_code)?;
+        writeln!(f, "new_licensee_code: {:?}", self.new_licensee_code)?;
+        writeln!(f, "sgb_flag: {:?}", self.sgb_flag)?;
+        writeln!(f, "cartridge_type: {:?}", self.cartridge_type)?;
+        writeln!(f, "rom_size: {:?}", self.rom_size)?;
+        writeln!(f, "ram_size: {:?}", self.ram_size)?;
+        writeln!(f, "destination_code: {:?}", self.destination_code)?;
+        writeln!(f, "version_number: {:?}", self.version_number)?;
+        writeln!(f, "header_checksum: {:#X?}", self.header_checksum)?;
+        write!(f, "global_checksum: {:#X?}", self.global_checksum)
     }
 }
 
 impl From<&[Data]> for CartridgeHeader {
     fn from(data: &[Data]) -> Self {
-        Self {
-            old_licensee_code: Self::parse_old_licensee_code(
-                data[(0x014B - CARTRIDGE_HEADER_START_ADDR) as usize],
-            ),
-            entry_point: Self::parse_entry_point(&data[0x0000..=0x0003]),
-            logo: Self::parse_logo(&data[ENTRY_POINT_SIZE..(ENTRY_POINT_SIZE + LOGO_SIZE)]),
-            title: Self::parse_title(&data[0x0034..=0x0043]),
+        let entry_point_addr_range: RangeInclusive<usize> = AddressRange::FullInclusive {
+            lower: 0x0100,
+            upper: 0x0103,
+        }
+        .checked_sub(CARTRIDGE_HEADER_START_ADDR)
+        .expect("Address Range Error")
+        .into();
 
-            // TODO: Finish implementing the rest of the parsing for the members
-            manufacturer_code: Self::parse_manufacturer_code(data),
-            cgb_flag: Self::parse_cgb_flag(data[0]),
-            new_licensee_code: Self::parse_new_licensee_code(data),
-            sgb_flag: Self::parse_sgb_flag(data[0]),
-            cartridge_type: Self::parse_cartridge_type(data[0]),
-            rom_size: Self::parse_rom_size(data[0]),
-            ram_size: Self::parse_ram_size(data[0]),
-            destination_code: Self::parse_destination_code(data[0]),
-            version_number: Self::parse_version_number(data[0]),
-            header_checksum: Self::parse_header_checksum(data[0]),
-            global_checksum: Self::parse_global_checksum(data),
+        let logo_addr_range: RangeInclusive<usize> = AddressRange::FullInclusive {
+            lower: 0x0104,
+            upper: 0x0133,
+        }
+        .checked_sub(CARTRIDGE_HEADER_START_ADDR)
+        .expect("Address Range Error")
+        .into();
+
+        let title_addr_range: RangeInclusive<usize> = AddressRange::FullInclusive {
+            lower: 0x0134,
+            upper: 0x0143,
+        }
+        .checked_sub(CARTRIDGE_HEADER_START_ADDR)
+        .expect("Address Range Error")
+        .into();
+
+        let manufacturer_code_addr_range: RangeInclusive<usize> = AddressRange::FullInclusive {
+            lower: 0x013F,
+            upper: 0x0142,
+        }
+        .checked_sub(CARTRIDGE_HEADER_START_ADDR)
+        .expect("Address Range Error")
+        .into();
+
+        let cgb_flag_addr_range: usize = AddressRange::Single { addr: 0x0143 }
+            .checked_sub(CARTRIDGE_HEADER_START_ADDR)
+            .expect("Address Range Error")
+            .lower()
+            .into();
+
+        let new_licensee_code_addr_range: RangeInclusive<usize> = AddressRange::FullInclusive {
+            lower: 0x0144,
+            upper: 0x0145,
+        }
+        .checked_sub(CARTRIDGE_HEADER_START_ADDR)
+        .expect("Address Range Error")
+        .into();
+
+        let sgb_flag_addr_range: usize = AddressRange::Single { addr: 0x0146 }
+            .checked_sub(CARTRIDGE_HEADER_START_ADDR)
+            .expect("Address Range Error")
+            .lower()
+            .into();
+
+        let cartridge_type_addr_range: usize = AddressRange::Single { addr: 0x0147 }
+            .checked_sub(CARTRIDGE_HEADER_START_ADDR)
+            .expect("Address Range Error")
+            .lower()
+            .into();
+
+        let rom_size_addr_range: usize = AddressRange::Single { addr: 0x0148 }
+            .checked_sub(CARTRIDGE_HEADER_START_ADDR)
+            .expect("Address Range Error")
+            .lower()
+            .into();
+
+        let ram_size_addr_range: usize = AddressRange::Single { addr: 0x0149 }
+            .checked_sub(CARTRIDGE_HEADER_START_ADDR)
+            .expect("Address Range Error")
+            .lower()
+            .into();
+
+        let destination_code_addr_range: usize = AddressRange::Single { addr: 0x014A }
+            .checked_sub(CARTRIDGE_HEADER_START_ADDR)
+            .expect("Address Range Error")
+            .lower()
+            .into();
+
+        let old_licensee_code_addr_range: usize = AddressRange::Single { addr: 0x014B }
+            .checked_sub(CARTRIDGE_HEADER_START_ADDR)
+            .expect("Address Range Error")
+            .lower()
+            .into();
+
+        let version_number_addr_range: usize = AddressRange::Single { addr: 0x014C }
+            .checked_sub(CARTRIDGE_HEADER_START_ADDR)
+            .expect("Address Range Error")
+            .lower()
+            .into();
+
+        let header_checksum_addr_range: usize = AddressRange::Single { addr: 0x014D }
+            .checked_sub(CARTRIDGE_HEADER_START_ADDR)
+            .expect("Address Range Error")
+            .lower()
+            .into();
+
+        let global_checksum_addr_range: RangeInclusive<usize> = AddressRange::FullInclusive {
+            lower: 0x014E,
+            upper: 0x014F,
+        }
+        .checked_sub(CARTRIDGE_HEADER_START_ADDR)
+        .expect("Address Range Error")
+        .into();
+
+        let entry_point = Self::parse_entry_point(&data[entry_point_addr_range]);
+        let logo = Self::parse_logo(&data[logo_addr_range]);
+        let title = Self::parse_title(&data[title_addr_range]);
+        let cgb_flag = Self::parse_cgb_flag(data[cgb_flag_addr_range]);
+        let manufacturer_code =
+            Self::parse_manufacturer_code(&data[manufacturer_code_addr_range], &cgb_flag);
+        let old_licensee_code = Self::parse_old_licensee_code(data[old_licensee_code_addr_range]);
+        let new_licensee_code =
+            Self::parse_new_licensee_code(&data[new_licensee_code_addr_range], &old_licensee_code);
+        let sgb_flag = Self::parse_sgb_flag(data[sgb_flag_addr_range]);
+        let cartridge_type = Self::parse_cartridge_type(data[cartridge_type_addr_range]);
+        let rom_size = Self::parse_rom_size(data[rom_size_addr_range]);
+        let ram_size = Self::parse_ram_size(data[ram_size_addr_range]);
+        let destination_code = Self::parse_destination_code(data[destination_code_addr_range]);
+        let version_number = Self::parse_version_number(data[version_number_addr_range]);
+        let header_checksum = Self::parse_header_checksum(data[header_checksum_addr_range]);
+        let global_checksum = Self::parse_global_checksum(&data[global_checksum_addr_range]);
+
+        Self {
+            entry_point: entry_point,
+            logo: logo,
+            title: title,
+            manufacturer_code: manufacturer_code,
+            cgb_flag: cgb_flag,
+            new_licensee_code: new_licensee_code,
+            sgb_flag: sgb_flag,
+            cartridge_type: cartridge_type,
+            rom_size: rom_size,
+            ram_size: ram_size,
+            destination_code: destination_code,
+            old_licensee_code: old_licensee_code,
+            version_number: version_number,
+            header_checksum: header_checksum,
+            global_checksum: global_checksum,
         }
     }
 }
@@ -801,8 +1046,11 @@ impl TryFrom<&[Data]> for GbCartridge {
             return Err(CartridgeError::TooSmall(data.len()));
         }
 
+        let header = data[0x0100..=0x014F].into();
+        info!("{}", header);
+
         Ok(Self {
-            header: data[0x0100..=0x014F].into(),
+            header: header,
             // TODO: Default construct the rest of the struct fields for now
             ..Default::default()
         })

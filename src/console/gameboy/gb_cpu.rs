@@ -1,7 +1,8 @@
 use super::TCycles;
 use super::gb_cartridge::GbCartridge;
-use super::gb_mmu::{Address, Data, GbMmu};
+use super::gb_mmu::GbMmu;
 use super::gb_ppu::GbPpu;
+use crate::common::gameboy::memory::types::{Address, Data};
 use instruction::Instruction;
 use tracing::{error, info, warn};
 
