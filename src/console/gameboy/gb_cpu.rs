@@ -1,7 +1,7 @@
 use super::gb_cartridge::GbCartridge;
 use super::gb_mmu::GbMmu;
 use super::gb_ppu::GbPpu;
-use crate::common::gameboy::cpu::types::TCycles;
+use crate::common::gameboy::cpu::types::TCycle;
 use crate::common::gameboy::memory::types::{Address, Data};
 use instruction::Instruction;
 use tracing::{error, info, warn};
@@ -299,7 +299,7 @@ impl GbCpu {
         mmu: &mut GbMmu,
         cartridge: &mut GbCartridge,
         ppu: &mut GbPpu,
-    ) -> TCycles {
+    ) -> TCycle {
         // Fetch
         let opcode = self.fetch(mmu, cartridge, ppu);
 
@@ -325,7 +325,7 @@ impl GbCpu {
     }
 
     #[inline]
-    fn execute(&mut self, instr: Instruction) -> TCycles {
+    fn execute(&mut self, instr: Instruction) -> TCycle {
         // The instruction should already contain both the opcode and any operands
         // And then at this point we can do some kind of function dispatch to execute the instruction
         match instr {

@@ -1,5 +1,5 @@
 use super::Console;
-use crate::common::gameboy::cpu::types::TCycles;
+use crate::common::gameboy::cpu::types::TCycle;
 use crate::common::gameboy::memory::types::Data;
 use gb_apu::GbApu;
 use gb_cartridge::GbCartridge;
@@ -28,7 +28,7 @@ pub struct GameBoy {
 
     // Keeps track of how many TCycles the CPU has stepped beyond the frame boundary
     // This is necessary in order to keep an accurate time-sync between the rest of the components and the CPU
-    catch_up_cycles: TCycles,
+    catch_up_cycles: TCycle,
 }
 
 impl Console for GameBoy {
