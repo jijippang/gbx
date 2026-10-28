@@ -1,4 +1,5 @@
 use super::Console;
+use crate::common::gameboy::memory::types::Data;
 use gb_apu::GbApu;
 use gb_cartridge::GbCartridge;
 use gb_cpu::GbCpu;
@@ -6,8 +7,9 @@ use gb_mmu::GbMmu;
 use gb_ppu::GbPpu;
 use std::fs;
 use std::io;
+use std::ops::RangeInclusive;
 use std::path::Path;
-use tracing::info;
+use tracing::{info, warn};
 
 mod gb_apu;
 mod gb_cartridge;
@@ -34,8 +36,8 @@ pub struct GameBoy {
 impl Console for GameBoy {
     const CONSOLE_MASTER_CLK_FREQ: f64 = 4.194304e6;
     const CONSOLE_FPS: f64 = 59.727500569606;
-    // [64 KiB, 128 KiB, 256 KiB, 512 KiB, 1 MiB]
-    const CONSOLE_CART_SIZES: &[usize] = &[0x10000, 0x20000, 0x40000, 0x80000, 0x100000];
+    // [32 KiB, 8 MiB]
+    const CONSOLE_CART_SIZE_RANGE: RangeInclusive<usize> = 0x8000..=0x800000;
 
     fn step(&mut self, cycles: u64) {
         // Add any leftover cycles from the last frame to our current frame's cycles
@@ -71,21 +73,34 @@ impl Console for GameBoy {
     }
 
     fn load_cartridge(&mut self, file_path: impl AsRef<Path>) -> Result<(), io::Error> {
+        const CART_PAD_VAL: Data = 0xFF;
+
         info!(
             "Attempting to load cartridge from: {}",
             file_path.as_ref().display()
         );
-        let cartridge_data = fs::read(file_path)?;
+        let mut cartridge_data = fs::read(file_path)?;
 
         // TODO: Perhaps think about moving this validation into the TryFrom trait for the GbCartridge struct
         // Validate cartridge size
-        if !Self::CONSOLE_CART_SIZES.contains(&cartridge_data.len()) {
+        let cartridge_data_len = cartridge_data.len();
+        if !Self::CONSOLE_CART_SIZE_RANGE.contains(&cartridge_data_len) {
             Err(io::Error::other(format!(
-                "Cartridge size: {}, is not one of the allowed cartridge sizes: {:?}",
-                cartridge_data.len(),
-                Self::CONSOLE_CART_SIZES
+                "Cartridge size: {}, does not fit within the allowed cartridge size range: {:?}",
+                cartridge_data_len,
+                Self::CONSOLE_CART_SIZE_RANGE
             )))
         } else {
+            // If the cartridge is not a power of 2, pad to the nearest power of 2 with CART_PAD_VAL
+            let target_size = cartridge_data_len.next_power_of_two();
+            if cartridge_data_len != target_size {
+                warn!(
+                    "Cartridge size: {} is not a power of 2, padding to {} bytes with value: {:#X}",
+                    cartridge_data_len, target_size, CART_PAD_VAL
+                );
+                cartridge_data.resize(target_size, CART_PAD_VAL);
+            }
+
             // TODO: Find a better way to handle the Result other than an unwrap()
             self.cartridge = cartridge_data.as_slice().try_into().unwrap();
             Ok(())

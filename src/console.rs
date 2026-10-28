@@ -1,5 +1,6 @@
 use clap::ValueEnum;
 use std::io;
+use std::ops::RangeInclusive;
 use std::path::Path;
 
 pub mod gameboy;
@@ -15,7 +16,7 @@ pub enum ConsoleModel {
 pub trait Console {
     const CONSOLE_MASTER_CLK_FREQ: f64;
     const CONSOLE_FPS: f64;
-    const CONSOLE_CART_SIZES: &[usize];
+    const CONSOLE_CART_SIZE_RANGE: RangeInclusive<usize>;
 
     fn step(&mut self, cycles: u64);
     fn get_video_buffer(&self) -> &[u8];
