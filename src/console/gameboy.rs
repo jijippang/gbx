@@ -1,4 +1,5 @@
 use super::Console;
+use crate::common::gameboy::cpu::types::TCycles;
 use crate::common::gameboy::memory::types::Data;
 use gb_apu::GbApu;
 use gb_cartridge::GbCartridge;
@@ -16,9 +17,6 @@ mod gb_cartridge;
 mod gb_cpu;
 mod gb_mmu;
 mod gb_ppu;
-
-// Timing Cycles (There are 4 timing cycles in 1 machine cycle), and each timing cycle should last approx. 1 / 4.194 [MHz] ~= 238.4 [ns]
-type TCycles = u64;
 
 #[derive(Debug, Default)]
 pub struct GameBoy {
