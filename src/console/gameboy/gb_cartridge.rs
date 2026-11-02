@@ -7,11 +7,9 @@ use tracing::info;
 
 mod mbc;
 
-const MIN_CARTRIDGE_SIZE: usize = 32768;
 const CARTRIDGE_HEADER_START_ADDR: Address = 0x0100;
 const ENTRY_POINT_SIZE: usize = 0x0103 - 0x0100 + 1;
 const LOGO_SIZE: usize = 0x0133 - 0x0104 + 1;
-const GLOBAL_CHECKSUM_SIZE: usize = 0x014F - 0x014E + 1;
 
 #[derive(Debug, Default)]
 enum CgbFlag {
@@ -194,10 +192,10 @@ impl From<Data> for SgbFlag {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Copy, Clone)]
 enum CartridgeType {
     #[default]
-    RomOnly,
+    Mbc0,
     Mbc1,
     Mbc1Ram,
     Mbc1RamBattery,
@@ -232,7 +230,7 @@ impl TryFrom<Data> for CartridgeType {
 
     fn try_from(data: Data) -> Result<Self, Self::Error> {
         match data {
-            0x00 => Ok(Self::RomOnly),
+            0x00 => Ok(Self::Mbc0),
             0x01 => Ok(Self::Mbc1),
             0x02 => Ok(Self::Mbc1Ram),
             0x03 => Ok(Self::Mbc1RamBattery),
@@ -815,13 +813,7 @@ impl CartridgeHeader {
     }
 
     fn parse_global_checksum(data: &[Data]) -> u16 {
-        u16::from_be_bytes(data.try_into().unwrap_or_else(|_| {
-            panic!(
-                "Data was {} bytes long, global checksum must be {} bytes long",
-                data.len(),
-                GLOBAL_CHECKSUM_SIZE
-            )
-        }))
+        u16::from_be_bytes(data.try_into().unwrap_or_else(|err| panic!("{}", err)))
     }
 }
 
@@ -1017,42 +1009,30 @@ pub struct GbCartridge {
 }
 
 impl GbCartridge {
-    // TODO: Fill out methods for GbCartridge here
-
     pub fn read(&self, addr: Address) -> Result<Data, MemoryReadError> {
-        todo!();
+        self.mbc.read(addr)
     }
 
     pub fn write(&mut self, addr: Address, data: Data) -> Result<(), MemoryWriteError> {
-        todo!();
+        self.mbc.write(addr, data)
     }
 
     pub fn reset(&mut self) {
-        todo!();
+        self.mbc.reset();
     }
 }
 
-#[derive(Debug)]
-pub enum CartridgeError {
-    // Cartridge memory size is smaller than the minimum (32 KiB)
-    TooSmall(usize),
-}
-
 impl TryFrom<&[Data]> for GbCartridge {
-    type Error = CartridgeError;
+    type Error = String;
 
     fn try_from(data: &[Data]) -> Result<Self, Self::Error> {
-        if data.len() < MIN_CARTRIDGE_SIZE {
-            return Err(CartridgeError::TooSmall(data.len()));
-        }
-
-        let header = data[0x0100..=0x014F].into();
+        let header: CartridgeHeader = data[0x0100..=0x014F].into();
         info!("{}", header);
+        let mbc: Mbc = header.cartridge_type.try_into()?;
 
         Ok(Self {
             header: header,
-            // TODO: Default construct the rest of the struct fields for now
-            ..Default::default()
+            mbc: mbc,
         })
     }
 }
