@@ -1,4 +1,4 @@
-use super::types::Address;
+use super::common::Address;
 use std::error::Error;
 use std::fmt;
 use std::ops::{Range, RangeInclusive};
@@ -313,32 +313,32 @@ impl AddressRange {
 }
 
 impl From<Address> for AddressRange {
-    fn from(addr: Address) -> Self {
-        Self::Single { addr: addr }
+    fn from(value: Address) -> Self {
+        Self::Single { addr: value }
     }
 }
 
 impl From<Range<Address>> for AddressRange {
-    fn from(range: Range<Address>) -> Self {
+    fn from(value: Range<Address>) -> Self {
         Self::LowerInclusive {
-            lower: range.start,
-            upper: range.end,
+            lower: value.start,
+            upper: value.end,
         }
     }
 }
 
 impl From<RangeInclusive<Address>> for AddressRange {
-    fn from(range_inclusive: RangeInclusive<Address>) -> Self {
+    fn from(value: RangeInclusive<Address>) -> Self {
         Self::FullInclusive {
-            lower: *range_inclusive.start(),
-            upper: *range_inclusive.end(),
+            lower: *value.start(),
+            upper: *value.end(),
         }
     }
 }
 
 impl From<AddressRange> for Range<usize> {
-    fn from(addr_range: AddressRange) -> Self {
-        match addr_range {
+    fn from(value: AddressRange) -> Self {
+        match value {
             AddressRange::Single { addr } => addr as usize..(addr + 1) as usize,
             AddressRange::FullInclusive { lower, upper } => lower as usize..(upper + 1) as usize,
             AddressRange::FullExclusive { lower, upper } => (lower + 1) as usize..upper as usize,
@@ -351,8 +351,8 @@ impl From<AddressRange> for Range<usize> {
 }
 
 impl From<AddressRange> for RangeInclusive<usize> {
-    fn from(addr_range: AddressRange) -> Self {
-        match addr_range {
+    fn from(value: AddressRange) -> Self {
+        match value {
             AddressRange::Single { addr } => addr as usize..=addr as usize,
             AddressRange::FullInclusive { lower, upper } => lower as usize..=upper as usize,
             AddressRange::FullExclusive { lower, upper } => {

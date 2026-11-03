@@ -22,8 +22,8 @@ enum LogLevelFilter {
 }
 
 impl From<LogLevelFilter> for LevelFilter {
-    fn from(level: LogLevelFilter) -> Self {
-        match level {
+    fn from(value: LogLevelFilter) -> Self {
+        match value {
             LogLevelFilter::Trace => Self::TRACE,
             LogLevelFilter::Debug => Self::DEBUG,
             LogLevelFilter::Info => Self::INFO,
@@ -35,8 +35,8 @@ impl From<LogLevelFilter> for LevelFilter {
 }
 
 impl From<LevelFilter> for LogLevelFilter {
-    fn from(level: LevelFilter) -> Self {
-        match level {
+    fn from(value: LevelFilter) -> Self {
+        match value {
             LevelFilter::TRACE => Self::Trace,
             LevelFilter::DEBUG => Self::Debug,
             LevelFilter::INFO => Self::Info,

@@ -1,6 +1,6 @@
 use super::gb_mmu::{MemoryReadError, MemoryWriteError};
 use crate::common::gameboy::memory::address_range::AddressRange;
-use crate::common::gameboy::memory::types::{Address, Data};
+use crate::common::gameboy::memory::common::{Address, Data};
 use mbc::Mbc;
 use std::{fmt, ops::RangeInclusive};
 use tracing::info;
@@ -25,8 +25,8 @@ enum CgbFlag {
 }
 
 impl From<Data> for CgbFlag {
-    fn from(data: Data) -> Self {
-        match data {
+    fn from(value: Data) -> Self {
+        match value {
             0x80 => Self::CgbEnhanced,
             0xC0 => Self::CgbOnly,
             _ => Self::Dmg,
@@ -102,8 +102,8 @@ enum NewLicenseeCode {
 impl TryFrom<&[Data]> for NewLicenseeCode {
     type Error = String;
 
-    fn try_from(data: &[Data]) -> Result<Self, Self::Error> {
-        match data {
+    fn try_from(value: &[Data]) -> Result<Self, Self::Error> {
+        match value {
             b"00" => Ok(Self::None),
             b"01" => Ok(Self::NintendoResearchAndDevelopment1),
             b"08" => Ok(Self::Capcom),
@@ -170,7 +170,7 @@ impl TryFrom<&[Data]> for NewLicenseeCode {
             b"DK" => Ok(Self::Kodansha),
             _ => Err(format!(
                 "Unknown data: {:#X?}, unable to deserialize into NewLicenseeCode",
-                data
+                value
             )),
         }
     }
@@ -184,8 +184,8 @@ enum SgbFlag {
 }
 
 impl From<Data> for SgbFlag {
-    fn from(data: Data) -> Self {
-        match data {
+    fn from(value: Data) -> Self {
+        match value {
             0x03 => Self::SgbSupported,
             _ => Self::SgbUnsupported,
         }
@@ -228,8 +228,8 @@ enum CartridgeType {
 impl TryFrom<Data> for CartridgeType {
     type Error = String;
 
-    fn try_from(data: Data) -> Result<Self, Self::Error> {
-        match data {
+    fn try_from(value: Data) -> Result<Self, Self::Error> {
+        match value {
             0x00 => Ok(Self::Mbc0),
             0x01 => Ok(Self::Mbc1),
             0x02 => Ok(Self::Mbc1Ram),
@@ -260,7 +260,7 @@ impl TryFrom<Data> for CartridgeType {
             0xFF => Ok(Self::HuC1RamBattery),
             _ => Err(format!(
                 "Unknown data: {:#X}, unable to deserialize into CartridgeType",
-                data
+                value
             )),
         }
     }
@@ -309,8 +309,8 @@ enum RomSize {
 impl TryFrom<Data> for RomSize {
     type Error = String;
 
-    fn try_from(data: Data) -> Result<Self, Self::Error> {
-        match data {
+    fn try_from(value: Data) -> Result<Self, Self::Error> {
+        match value {
             0x00 => Ok(Self::Size32KiB),
             0x01 => Ok(Self::Size64KiB),
             0x02 => Ok(Self::Size128KiB),
@@ -325,13 +325,13 @@ impl TryFrom<Data> for RomSize {
             0x54 => Ok(Self::Size1_5MiB),
             _ => Err(format!(
                 "Unknown data: {:#X}, unable to deserialize into RomSize",
-                data
+                value
             )),
         }
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Copy, Clone)]
 enum RamSize {
     #[default]
     // RAM Banks: No RAM
@@ -356,8 +356,8 @@ enum RamSize {
 impl TryFrom<Data> for RamSize {
     type Error = String;
 
-    fn try_from(data: Data) -> Result<Self, Self::Error> {
-        match data {
+    fn try_from(value: Data) -> Result<Self, Self::Error> {
+        match value {
             0x00 => Ok(Self::Size0KiB),
             0x01 => Ok(Self::Size2KiB),
             0x02 => Ok(Self::Size8KiB),
@@ -366,8 +366,21 @@ impl TryFrom<Data> for RamSize {
             0x05 => Ok(Self::Size64KiB),
             _ => Err(format!(
                 "Unknown data: {:#X}, unable to deserialize into RamSize",
-                data
+                value
             )),
+        }
+    }
+}
+
+impl From<RamSize> for usize {
+    fn from(value: RamSize) -> Self {
+        match value {
+            RamSize::Size0KiB => 0,
+            RamSize::Size2KiB => 2048,
+            RamSize::Size8KiB => 8192,
+            RamSize::Size32KiB => 32768,
+            RamSize::Size128KiB => 131072,
+            RamSize::Size64KiB => 65536,
         }
     }
 }
@@ -382,13 +395,13 @@ enum DestinationCode {
 impl TryFrom<Data> for DestinationCode {
     type Error = String;
 
-    fn try_from(data: Data) -> Result<Self, Self::Error> {
-        match data {
+    fn try_from(value: Data) -> Result<Self, Self::Error> {
+        match value {
             0x00 => Ok(Self::JapanAndOverseas),
             0x01 => Ok(Self::OverseasOnly),
             _ => Err(format!(
                 "Unknown data: {:#X}, unable to deserialize into DestinationCode",
-                data
+                value
             )),
         }
     }
@@ -520,8 +533,8 @@ enum OldLicenseeCode {
 impl TryFrom<Data> for OldLicenseeCode {
     type Error = String;
 
-    fn try_from(data: Data) -> Result<Self, Self::Error> {
-        match data {
+    fn try_from(value: Data) -> Result<Self, Self::Error> {
+        match value {
             0x00 => Ok(Self::None),
             0x01 => Ok(Self::Nintendo),
             0x08 => Ok(Self::Capcom),
@@ -671,7 +684,7 @@ impl TryFrom<Data> for OldLicenseeCode {
             0xFF => Ok(Self::Ljn),
             _ => Err(format!(
                 "Unknown data: {:#X}, unable to deserialize into OldLicenseeCode",
-                data
+                value
             )),
         }
     }
@@ -839,7 +852,7 @@ impl fmt::Display for CartridgeHeader {
 }
 
 impl From<&[Data]> for CartridgeHeader {
-    fn from(data: &[Data]) -> Self {
+    fn from(value: &[Data]) -> Self {
         let entry_point_addr_range: RangeInclusive<usize> = AddressRange::FullInclusive {
             lower: 0x0100,
             upper: 0x0103,
@@ -942,23 +955,23 @@ impl From<&[Data]> for CartridgeHeader {
         .expect("Address Range Error")
         .into();
 
-        let entry_point = Self::parse_entry_point(&data[entry_point_addr_range]);
-        let logo = Self::parse_logo(&data[logo_addr_range]);
-        let title = Self::parse_title(&data[title_addr_range]);
-        let cgb_flag = Self::parse_cgb_flag(data[cgb_flag_addr_range]);
+        let entry_point = Self::parse_entry_point(&value[entry_point_addr_range]);
+        let logo = Self::parse_logo(&value[logo_addr_range]);
+        let title = Self::parse_title(&value[title_addr_range]);
+        let cgb_flag = Self::parse_cgb_flag(value[cgb_flag_addr_range]);
         let manufacturer_code =
-            Self::parse_manufacturer_code(&data[manufacturer_code_addr_range], &cgb_flag);
-        let old_licensee_code = Self::parse_old_licensee_code(data[old_licensee_code_addr_range]);
+            Self::parse_manufacturer_code(&value[manufacturer_code_addr_range], &cgb_flag);
+        let old_licensee_code = Self::parse_old_licensee_code(value[old_licensee_code_addr_range]);
         let new_licensee_code =
-            Self::parse_new_licensee_code(&data[new_licensee_code_addr_range], &old_licensee_code);
-        let sgb_flag = Self::parse_sgb_flag(data[sgb_flag_addr_range]);
-        let cartridge_type = Self::parse_cartridge_type(data[cartridge_type_addr_range]);
-        let rom_size = Self::parse_rom_size(data[rom_size_addr_range]);
-        let ram_size = Self::parse_ram_size(data[ram_size_addr_range]);
-        let destination_code = Self::parse_destination_code(data[destination_code_addr_range]);
-        let version_number = Self::parse_version_number(data[version_number_addr_range]);
-        let header_checksum = Self::parse_header_checksum(data[header_checksum_addr_range]);
-        let global_checksum = Self::parse_global_checksum(&data[global_checksum_addr_range]);
+            Self::parse_new_licensee_code(&value[new_licensee_code_addr_range], &old_licensee_code);
+        let sgb_flag = Self::parse_sgb_flag(value[sgb_flag_addr_range]);
+        let cartridge_type = Self::parse_cartridge_type(value[cartridge_type_addr_range]);
+        let rom_size = Self::parse_rom_size(value[rom_size_addr_range]);
+        let ram_size = Self::parse_ram_size(value[ram_size_addr_range]);
+        let destination_code = Self::parse_destination_code(value[destination_code_addr_range]);
+        let version_number = Self::parse_version_number(value[version_number_addr_range]);
+        let header_checksum = Self::parse_header_checksum(value[header_checksum_addr_range]);
+        let global_checksum = Self::parse_global_checksum(&value[global_checksum_addr_range]);
 
         Self {
             entry_point: entry_point,
@@ -1005,33 +1018,42 @@ impl Default for CartridgeHeader {
 #[derive(Debug, Default)]
 pub struct GbCartridge {
     header: CartridgeHeader,
+    rom: Vec<Data>,
+    ram: Vec<Data>,
     mbc: Mbc,
 }
 
 impl GbCartridge {
     pub fn read(&self, addr: Address) -> Result<Data, MemoryReadError> {
-        self.mbc.read(addr)
+        self.mbc.read(addr, &self.rom, &self.ram)
     }
 
     pub fn write(&mut self, addr: Address, data: Data) -> Result<(), MemoryWriteError> {
-        self.mbc.write(addr, data)
-    }
-
-    pub fn reset(&mut self) {
-        self.mbc.reset();
+        self.mbc.write(addr, data, &mut self.ram)
     }
 }
 
-impl TryFrom<&[Data]> for GbCartridge {
+impl TryFrom<Vec<Data>> for GbCartridge {
     type Error = String;
 
-    fn try_from(data: &[Data]) -> Result<Self, Self::Error> {
-        let header: CartridgeHeader = data[0x0100..=0x014F].into();
+    fn try_from(value: Vec<Data>) -> Result<Self, Self::Error> {
+        let header: CartridgeHeader = value
+            .get(0x0100..=0x014F)
+            .unwrap_or_else(|| {
+                panic!(
+                    "Cartridge size: {} [bytes], does not allow parsing of cartridge header",
+                    value.len()
+                )
+            })
+            .into();
         info!("{}", header);
+        let ram: Vec<Data> = vec![0; header.ram_size.into()];
         let mbc: Mbc = header.cartridge_type.try_into()?;
 
         Ok(Self {
             header: header,
+            rom: value,
+            ram: ram,
             mbc: mbc,
         })
     }

@@ -1,6 +1,6 @@
 use super::Console;
-use crate::common::gameboy::cpu::types::TCycle;
-use crate::common::gameboy::memory::types::Data;
+use crate::common::gameboy::cpu::common::TCycle;
+use crate::common::gameboy::memory::common::Data;
 use gb_apu::GbApu;
 use gb_cartridge::GbCartridge;
 use gb_cpu::GbCpu;
@@ -84,7 +84,7 @@ impl Console for GameBoy {
         let cartridge_data_len = cartridge_data.len();
         if !Self::CONSOLE_CART_SIZE_RANGE.contains(&cartridge_data_len) {
             Err(io::Error::other(format!(
-                "Cartridge size: {}, does not fit within the allowed cartridge size range: {:?}",
+                "Cartridge size: {} [bytes], does not fit within the allowed cartridge size range: {:?}",
                 cartridge_data_len,
                 Self::CONSOLE_CART_SIZE_RANGE
             )))
@@ -93,14 +93,14 @@ impl Console for GameBoy {
             let target_size = cartridge_data_len.next_power_of_two();
             if cartridge_data_len != target_size {
                 warn!(
-                    "Cartridge size: {} is not a power of 2, padding to {} bytes with value: {:#X}",
+                    "Cartridge size: {} [bytes] is not a power of 2, padding to {} [bytes] with value: {:#X}",
                     cartridge_data_len, target_size, CART_PAD_VAL
                 );
                 cartridge_data.resize(target_size, CART_PAD_VAL);
             }
 
             // TODO: Find a better way to handle the Result other than an unwrap()
-            self.cartridge = cartridge_data.as_slice().try_into().unwrap();
+            self.cartridge = cartridge_data.try_into().unwrap();
             Ok(())
         }
     }

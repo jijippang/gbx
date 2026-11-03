@@ -1,10 +1,9 @@
 use super::{GbCartridge, GbPpu};
-use crate::common::gameboy::memory::types::{Address, Data};
+use crate::common::gameboy::memory::common::{Address, Data, OPEN_BUS};
 use std::error::Error;
 use std::fmt;
 use tracing::warn;
 
-const OPEN_BUS: Data = 0xFF;
 const WRAM_SIZE: usize = 0xDFFF - 0xC000 + 1;
 const IO_SIZE: usize = 0xFF7F - 0xFF00 + 1;
 const HRAM_SIZE: usize = 0xFFFE - 0xFF80 + 1;
@@ -44,8 +43,8 @@ impl fmt::Display for MemoryReadError {
 }
 
 impl From<MemoryReadError> for Data {
-    fn from(err: MemoryReadError) -> Self {
-        match err {
+    fn from(value: MemoryReadError) -> Self {
+        match value {
             MemoryReadError::OutOfBounds(data) => data,
             MemoryReadError::Locked(data) => data,
             MemoryReadError::WriteOnly(data) => data,

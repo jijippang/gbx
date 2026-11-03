@@ -1,8 +1,8 @@
 use super::gb_cartridge::GbCartridge;
 use super::gb_mmu::GbMmu;
 use super::gb_ppu::GbPpu;
-use crate::common::gameboy::cpu::types::TCycle;
-use crate::common::gameboy::memory::types::{Address, Data};
+use crate::common::gameboy::cpu::common::TCycle;
+use crate::common::gameboy::memory::common::{Address, Data};
 use instruction::Instruction;
 use tracing::{error, info, warn};
 
@@ -42,8 +42,8 @@ impl R8 {
 impl TryFrom<Data> for R8 {
     type Error = String;
 
-    fn try_from(data: Data) -> Result<Self, Self::Error> {
-        match data {
+    fn try_from(value: Data) -> Result<Self, Self::Error> {
+        match value {
             0b111 => Ok(Self::A),
             0b000 => Ok(Self::B),
             0b001 => Ok(Self::C),
@@ -51,7 +51,7 @@ impl TryFrom<Data> for R8 {
             0b011 => Ok(Self::E),
             0b100 => Ok(Self::H),
             0b101 => Ok(Self::L),
-            _ => Err(format!("Unknown byte: {:#010b}, cannot decode R8", data)),
+            _ => Err(format!("Unknown byte: {:#010b}, cannot decode R8", value)),
         }
     }
 }
@@ -71,12 +71,12 @@ impl R16 {
 impl TryFrom<Data> for R16 {
     type Error = String;
 
-    fn try_from(data: Data) -> Result<Self, Self::Error> {
-        match data {
+    fn try_from(value: Data) -> Result<Self, Self::Error> {
+        match value {
             0b00 => Ok(Self::BC),
             0b01 => Ok(Self::DE),
             0b10 => Ok(Self::HL),
-            _ => Err(format!("Unknown byte: {:#010b}, cannot decode R16", data)),
+            _ => Err(format!("Unknown byte: {:#010b}, cannot decode R16", value)),
         }
     }
 }

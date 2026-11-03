@@ -1,48 +1,66 @@
-use super::{Address, CartridgeType, Data, MemoryReadError, MemoryWriteError};
+use super::{CartridgeType, MemoryReadError, MemoryWriteError};
+use crate::common::gameboy::memory::common::{Address, Data, OPEN_BUS};
 
 #[derive(Debug, Default)]
-// ROM and RAM only, no bank switching supported
-pub struct Mbc0 {
-    rom: Vec<Data>,
-    ram: Vec<Data>,
-    ram_enable: bool,
-}
+// ROM only, no bank switching supported
+pub struct Mbc0;
 
 impl Mbc0 {
-    fn read(&self, addr: Address) -> Result<Data, MemoryReadError> {
-        todo!();
+    fn read(&self, addr: Address, rom: &[Data], _ram: &[Data]) -> Result<Data, MemoryReadError> {
+        match addr {
+            0x0000..=0x7FFF => Ok(rom.get(addr as usize).copied().unwrap_or(OPEN_BUS)),
+            _ => Ok(OPEN_BUS),
+        }
     }
 
-    fn write(&mut self, addr: Address, data: Data) -> Result<(), MemoryWriteError> {
-        todo!();
-    }
-
-    fn reset(&mut self) {
-        todo!();
+    fn write(
+        &mut self,
+        _addr: Address,
+        _data: Data,
+        _ram: &mut [Data],
+    ) -> Result<(), MemoryWriteError> {
+        Ok(())
     }
 }
 
 #[derive(Debug, Default)]
+enum Mbc1Mode {
+    #[default]
+    Simple,
+    Advanced,
+}
+
+#[derive(Debug)]
 pub struct Mbc1 {
-    rom: Vec<Data>,
-    ram: Vec<Data>,
     rom_bank: usize,
     ram_bank: usize,
     ram_enable: bool,
-    banking_mode: bool,
+    banking_mode: Mbc1Mode,
 }
 
 impl Mbc1 {
-    fn read(&self, addr: Address) -> Result<Data, MemoryReadError> {
+    fn read(&self, addr: Address, rom: &[Data], ram: &[Data]) -> Result<Data, MemoryReadError> {
         todo!();
     }
 
-    fn write(&mut self, addr: Address, data: Data) -> Result<(), MemoryWriteError> {
+    fn write(
+        &mut self,
+        addr: Address,
+        data: Data,
+        ram: &mut [Data],
+    ) -> Result<(), MemoryWriteError> {
         todo!();
     }
+}
 
-    fn reset(&mut self) {
-        todo!();
+impl Default for Mbc1 {
+    fn default() -> Self {
+        Self {
+            rom_bank: 1,
+            ram_bank: 0,
+            ram_enable: false,
+            banking_mode: Mbc1Mode::default(),
+        }
     }
 }
 
@@ -54,24 +72,22 @@ pub enum Mbc {
 }
 
 impl Mbc {
-    pub fn read(&self, addr: Address) -> Result<Data, MemoryReadError> {
+    pub fn read(&self, addr: Address, rom: &[Data], ram: &[Data]) -> Result<Data, MemoryReadError> {
         match self {
-            Self::Mbc0(mbc) => mbc.read(addr),
-            Self::Mbc1(mbc) => mbc.read(addr),
+            Self::Mbc0(mbc) => mbc.read(addr, rom, ram),
+            Self::Mbc1(mbc) => mbc.read(addr, rom, ram),
         }
     }
 
-    pub fn write(&mut self, addr: Address, data: Data) -> Result<(), MemoryWriteError> {
+    pub fn write(
+        &mut self,
+        addr: Address,
+        data: Data,
+        ram: &mut [Data],
+    ) -> Result<(), MemoryWriteError> {
         match self {
-            Self::Mbc0(mbc) => mbc.write(addr, data),
-            Self::Mbc1(mbc) => mbc.write(addr, data),
-        }
-    }
-
-    pub fn reset(&mut self) {
-        match self {
-            Self::Mbc0(mbc) => mbc.reset(),
-            Self::Mbc1(mbc) => mbc.reset(),
+            Self::Mbc0(mbc) => mbc.write(addr, data, ram),
+            Self::Mbc1(mbc) => mbc.write(addr, data, ram),
         }
     }
 }

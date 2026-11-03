@@ -1,5 +1,5 @@
 use super::gb_mmu::{MemoryReadError, MemoryWriteError};
-use crate::common::gameboy::memory::types::{Address, Data};
+use crate::common::gameboy::memory::common::{Address, Data};
 
 pub const VRAM_SIZE: usize = 0x9FFF - 0x8000 + 1;
 pub const OAM_SIZE: usize = 0xFE9F - 0xFE00 + 1;
