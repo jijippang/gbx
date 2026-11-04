@@ -9,17 +9,22 @@ impl Mbc0 {
     fn read(&self, addr: Address, rom: &[Data], _ram: &[Data]) -> Result<Data, MemoryReadError> {
         match addr {
             0x0000..=0x7FFF => Ok(rom.get(addr as usize).copied().unwrap_or(OPEN_BUS)),
+            0xA000..=0xBFFF => Err(MemoryReadError::RamNotSupported(OPEN_BUS)),
             _ => Ok(OPEN_BUS),
         }
     }
 
     fn write(
         &mut self,
-        _addr: Address,
+        addr: Address,
         _data: Data,
         _ram: &mut [Data],
     ) -> Result<(), MemoryWriteError> {
-        Ok(())
+        match addr {
+            0x0000..=0x7FFF => Err(MemoryWriteError::ReadOnly),
+            0xA000..=0xBFFF => Err(MemoryWriteError::RamNotSupported),
+            _ => Ok(()),
+        }
     }
 }
 
