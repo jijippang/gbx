@@ -115,7 +115,64 @@ impl Mbc1 {
         data: Data,
         ram: &mut [Data],
     ) -> Result<(), MemoryWriteError> {
-        todo!();
+        match addr {
+            // RAM Enable Register
+            0x0000..=0x1FFF => {
+                self.ram_enable = (data & 0x0F) == 0x0A;
+                Ok(())
+            }
+
+            // ROM Bank Register
+            0x2000..=0x3FFF => {
+                // ROM bank register is only 5 bits wide
+                let mut bank = (data & 0x1F) as usize;
+
+                // Need to account for the that fact that the Mbc1 treats the rom_bank as a 1 if its set to 0
+                if bank == 0 {
+                    bank = 1;
+                }
+
+                self.rom_bank = bank;
+                Ok(())
+            }
+
+            // RAM Bank Register
+            0x4000..=0x5FFF => {
+                self.ram_bank = (data & 0x03) as usize;
+                Ok(())
+            }
+
+            // Mode Register
+            0x6000..=0x7FFF => {
+                self.mode = if data & 0x01 == 0x01 {
+                    Mbc1Mode::Advanced
+                } else {
+                    Mbc1Mode::Simple
+                };
+                Ok(())
+            }
+
+            // RAM
+            0xA000..=0xBFFF => {
+                if !self.ram_enable || ram.is_empty() {
+                    return Err(MemoryWriteError::RamNotSupported);
+                }
+
+                let bank = match self.mode {
+                    Mbc1Mode::Simple => 0,
+                    Mbc1Mode::Advanced => self.ram_bank,
+                };
+
+                let addr = ((bank * RAM_BANK_SIZE) + ((addr - 0xA000) as usize)) % ram.len();
+                match ram.get_mut(addr) {
+                    Some(elem) => *elem = data,
+                    None => return Err(MemoryWriteError::OutOfBounds),
+                };
+                Ok(())
+            }
+
+            _ => Err(MemoryWriteError::OutOfBounds),
+        }
     }
 }
 
