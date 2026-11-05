@@ -217,7 +217,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn test_read() {
+        fn read() {
             // out of bounds
             let mmu = GbMmu::default();
             let cartridge = GbCartridge::default();
@@ -284,7 +284,7 @@ mod tests {
         }
 
         #[test]
-        fn test_write() {
+        fn write() {
             // out of bounds
             let mut mmu = GbMmu::default();
             let mut cartridge = GbCartridge::default();

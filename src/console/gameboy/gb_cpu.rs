@@ -366,7 +366,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn test_try_from() {
+        fn try_from() {
             let byte = 0b11111_111;
             let r8 = R8::try_from(byte);
             assert!(r8.is_err());
@@ -405,7 +405,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn test_try_from() {
+        fn try_from() {
             let byte = 0b111111_11;
             let r16 = R16::try_from(byte);
             assert!(r16.is_err());
@@ -428,7 +428,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn test_get_r8() {
+        fn get_r8() {
             let registers = Registers {
                 a: 0x4F,
                 b: 0x72,
@@ -466,7 +466,7 @@ mod tests {
         }
 
         #[test]
-        fn test_set_r8() {
+        fn set_r8() {
             let mut registers = Registers::default();
 
             registers.set_r8(R8::A, 0x4F);
@@ -495,7 +495,7 @@ mod tests {
         }
 
         #[test]
-        fn test_get_r16() {
+        fn get_r16() {
             let registers = Registers {
                 a: 0x4F,
                 b: 0x72,
@@ -521,7 +521,7 @@ mod tests {
         }
 
         #[test]
-        fn test_set_r16() {
+        fn set_r16() {
             let mut registers = Registers::default();
 
             registers.set_r16(R16::AF, 0x4FD9);
@@ -538,7 +538,7 @@ mod tests {
         }
 
         #[test]
-        fn test_get_flag() {
+        fn get_flag() {
             let registers = Registers {
                 f: 0xD9,
                 ..Default::default()
@@ -558,7 +558,7 @@ mod tests {
         }
 
         #[test]
-        fn test_set_flag() {
+        fn set_flag() {
             let mut registers = Registers::default();
 
             registers.set_flag(Flag::Z, false);
@@ -575,14 +575,14 @@ mod tests {
         }
     }
 
-    mod gb_cpu_tests {
-        use super::*;
-
-        #[test]
-        fn test() {
-            // TODO: Add unit tests for GbCpu
-        }
-    }
+    // mod gb_cpu_tests {
+    //     use super::*;
+    //
+    //     #[test]
+    //     fn test() {
+    //         // TODO: Add unit tests for GbCpu
+    //     }
+    // }
 }
 
 // --- UNIT TESTS END ---

@@ -246,7 +246,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn test_read() {
+        fn read() {
             let mbc0 = Mbc0::default();
             let addr = 0x2000;
             let rom = vec![0x99; 1000];
@@ -283,7 +283,7 @@ mod tests {
         }
 
         #[test]
-        fn test_write() {
+        fn write() {
             let mut mbc0 = Mbc0::default();
             let addr = 0x101A;
             let data = 0xDB;
@@ -311,12 +311,12 @@ mod tests {
     //     use super::*;
     //
     //     #[test]
-    //     fn test_read() {
+    //     fn read() {
     //         todo!();
     //     }
     //
     //     #[test]
-    //     fn test_write() {
+    //     fn write() {
     //         todo!();
     //     }
     // }
@@ -325,12 +325,12 @@ mod tests {
     //     use super::*;
     //
     //     #[test]
-    //     fn test_read() {
+    //     fn read() {
     //         todo!();
     //     }
     //
     //     #[test]
-    //     fn test_write() {
+    //     fn write() {
     //         todo!();
     //     }
     // }
