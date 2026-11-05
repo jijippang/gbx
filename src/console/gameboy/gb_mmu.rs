@@ -1,24 +1,26 @@
 use super::{GbCartridge, GbPpu};
-use crate::common::gameboy::memory::types::{Address, Data};
+use crate::common::gameboy::memory::common::{Address, Data, OPEN_BUS};
 use std::error::Error;
 use std::fmt;
 use tracing::warn;
 
-const OPEN_BUS: Data = 0xFF;
 const WRAM_SIZE: usize = 0xDFFF - 0xC000 + 1;
 const IO_SIZE: usize = 0xFF7F - 0xFF00 + 1;
 const HRAM_SIZE: usize = 0xFFFE - 0xFF80 + 1;
 
 #[derive(Debug)]
 pub enum MemoryReadError {
-    // Attempting to read from memory locations that are unusable or prohibited
+    // Attempting to read from a memory location that is unusable or prohibited
     OutOfBounds(Data),
 
-    // Attempting to read from memory locations that are currently locked
+    // Attempting to read from a memory location that is currently locked
     Locked(Data),
 
-    // Attempting to read from memory locations that are write only
+    // Attempting to read from a memory locations that is write only
     WriteOnly(Data),
+
+    // Attempting to read from RAM which does not exist
+    RamNotSupported(Data),
 }
 
 impl fmt::Display for MemoryReadError {
@@ -26,17 +28,22 @@ impl fmt::Display for MemoryReadError {
         match self {
             Self::OutOfBounds(data) => write!(
                 f,
-                "Attempting to read from memory location that is unusable or prohibited, returning default value of: {:#X}",
+                "Attempting to read from a memory location that is unusable or prohibited, returning default value of: {:#X}",
                 data
             ),
             Self::Locked(data) => write!(
                 f,
-                "Attempting to read from memory location that is currently locked, returning default value of: {:#X}",
+                "Attempting to read from a memory location that is currently locked, returning default value of: {:#X}",
                 data
             ),
             Self::WriteOnly(data) => write!(
                 f,
-                "Attempting to read from memory location that is write only, returning default value of: {:#X}",
+                "Attempting to read from a memory location that is write only, returning default value of: {:#X}",
+                data
+            ),
+            Self::RamNotSupported(data) => write!(
+                f,
+                "Attempting to read from RAM which does not exist, returning default value of: {:#X}",
                 data
             ),
         }
@@ -44,11 +51,12 @@ impl fmt::Display for MemoryReadError {
 }
 
 impl From<MemoryReadError> for Data {
-    fn from(err: MemoryReadError) -> Self {
-        match err {
+    fn from(value: MemoryReadError) -> Self {
+        match value {
             MemoryReadError::OutOfBounds(data) => data,
             MemoryReadError::Locked(data) => data,
             MemoryReadError::WriteOnly(data) => data,
+            MemoryReadError::RamNotSupported(data) => data,
         }
     }
 }
@@ -57,14 +65,17 @@ impl Error for MemoryReadError {}
 
 #[derive(Debug)]
 pub enum MemoryWriteError {
-    // Attempting to write to memory locations that are unusable or prohibited
+    // Attempting to write to a memory location that is unusable or prohibited
     OutOfBounds,
 
-    // Attempting to write to memory locations that are currently locked
+    // Attempting to write to a memory location that is currently locked
     Locked,
 
-    // Attempting to write to memory locations that are read only
+    // Attempting to write to a memory location that is read only
     ReadOnly,
+
+    // Attempting to write to RAM which does not exist
+    RamNotSupported,
 }
 
 impl fmt::Display for MemoryWriteError {
@@ -72,16 +83,17 @@ impl fmt::Display for MemoryWriteError {
         match self {
             Self::OutOfBounds => write!(
                 f,
-                "Attempting to write to memory location that is unusable or prohibited"
+                "Attempting to write to a memory location that is unusable or prohibited"
             ),
             Self::Locked => write!(
                 f,
-                "Attempting to write to memory location that is currently locked"
+                "Attempting to write to a memory location that is currently locked"
             ),
             Self::ReadOnly => write!(
                 f,
-                "Attempting to write to memory location that is read only"
+                "Attempting to write to a memory location that is read only"
             ),
+            Self::RamNotSupported => write!(f, "Attempting to write to RAM which does not exist"),
         }
     }
 }
