@@ -93,10 +93,7 @@ impl fmt::Display for MemoryWriteError {
                 f,
                 "Attempting to write to a memory location that is read only"
             ),
-            Self::RamNotSupported => write!(
-                f,
-                "Attempting to write to RAM which does not exist"
-            ),
+            Self::RamNotSupported => write!(f, "Attempting to write to RAM which does not exist"),
         }
     }
 }

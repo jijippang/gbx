@@ -1,6 +1,9 @@
 use super::{CartridgeType, MemoryReadError, MemoryWriteError};
 use crate::common::gameboy::memory::common::{Address, Data, OPEN_BUS};
 
+const ROM_BANK_SIZE: usize = 0x4000;
+const RAM_BANK_SIZE: usize = 0x2000;
+
 #[derive(Debug, Default)]
 // ROM only, no bank switching supported
 pub struct Mbc0;
@@ -31,21 +34,79 @@ impl Mbc0 {
 #[derive(Debug, Default)]
 enum Mbc1Mode {
     #[default]
+    // [0x0000, 0x3FFF] and [0xA000, 0xBFFF] are locked to bank 0 of ROM and SRAM respectively
     Simple,
+    // [0x0000, 0x3FFF] and [0xA000, 0xBFFF] can be bank-switched via the [0x4000, 0x5FFF] register
     Advanced,
 }
 
 #[derive(Debug)]
 pub struct Mbc1 {
+    // Control registers
+
+    // 5 bit register (Range: [0x01, 0x1F]) that selects the ROM bank number for the [0x4000, 0x7FFF] memory region
+    // NOTE: The lowest value that this ROM bank number can be is 0x01 as ROM bank 0x00 is reserved for memory region [0x0000, 0x3FFF]
     rom_bank: usize,
+
+    // 2 bit register (Range: [0x00, 0x03]) that selects the RAM bank number for the [0xA000, 0xBFFF] memory region
+    // This register can also be used to extend the ROM bank number by adding 2 more bits (bits 5-6) to the ROM bank number
     ram_bank: usize,
+
+    // Enables or disables reads/writes to the RAM
     ram_enable: bool,
-    banking_mode: Mbc1Mode,
+
+    // Controls the interpretation/behavior of the ram_bank number, as in whether to use it to extend the ROM bank
+    // selection or to use it to actively switch between RAM banks [0x00, 0x03]
+    mode: Mbc1Mode,
 }
 
 impl Mbc1 {
     fn read(&self, addr: Address, rom: &[Data], ram: &[Data]) -> Result<Data, MemoryReadError> {
-        todo!();
+        match addr {
+            // ROM Bank 0
+            0x0000..=0x3FFF => {
+                let bank = match self.mode {
+                    // Simple mode fixes the rom bank to 0
+                    Mbc1Mode::Simple => 0,
+                    // Advanced mode maps the rom bank to 0x00, 0x20, 0x40, 0x60 depending on the 2 bits of the ram bank
+                    // bank = (0b00000) -> rom bank + (0bxx00000) -> ram bank = 0bxx00000
+                    Mbc1Mode::Advanced => self.ram_bank << 5,
+                };
+
+                let addr = ((bank * ROM_BANK_SIZE) + (addr as usize)) % rom.len();
+                Ok(rom.get(addr).copied().unwrap_or(OPEN_BUS))
+            }
+
+            // Switchable ROM Banks
+            0x4000..=0x7FFF => {
+                // Need to account for the that fact that the Mbc1 treats the rom_bank as a 1 if its set to 0
+                let low_bits = if self.rom_bank == 0 { 1 } else { self.rom_bank };
+                let high_bits = self.ram_bank;
+
+                // Combine the rom bank (lower 5 bits) with the ram bank (upper 2 bits) to form the bank number
+                let bank = (high_bits << 5) | low_bits;
+
+                let addr = ((bank * ROM_BANK_SIZE) + ((addr - 0x4000) as usize)) % rom.len();
+                Ok(rom.get(addr).copied().unwrap_or(OPEN_BUS))
+            }
+
+            // Switchable RAM Banks
+            0xA000..=0xBFFF => {
+                if !self.ram_enable || ram.is_empty() {
+                    return Err(MemoryReadError::RamNotSupported(OPEN_BUS));
+                }
+
+                let bank = match self.mode {
+                    Mbc1Mode::Simple => 0,
+                    Mbc1Mode::Advanced => self.ram_bank,
+                };
+
+                let addr = ((bank * RAM_BANK_SIZE) + ((addr - 0xA000) as usize)) % ram.len();
+                Ok(ram.get(addr).copied().unwrap_or(OPEN_BUS))
+            }
+
+            _ => Err(MemoryReadError::OutOfBounds(OPEN_BUS)),
+        }
     }
 
     fn write(
@@ -64,7 +125,7 @@ impl Default for Mbc1 {
             rom_bank: 1,
             ram_bank: 0,
             ram_enable: false,
-            banking_mode: Mbc1Mode::default(),
+            mode: Mbc1Mode::Simple,
         }
     }
 }
