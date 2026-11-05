@@ -13,7 +13,7 @@ impl Mbc0 {
         match addr {
             0x0000..=0x7FFF => Ok(rom.get(addr as usize).copied().unwrap_or(OPEN_BUS)),
             0xA000..=0xBFFF => Err(MemoryReadError::RamNotSupported(OPEN_BUS)),
-            _ => Ok(OPEN_BUS),
+            _ => Err(MemoryReadError::OutOfBounds(OPEN_BUS)),
         }
     }
 
@@ -26,7 +26,7 @@ impl Mbc0 {
         match addr {
             0x0000..=0x7FFF => Err(MemoryWriteError::ReadOnly),
             0xA000..=0xBFFF => Err(MemoryWriteError::RamNotSupported),
-            _ => Ok(()),
+            _ => Err(MemoryWriteError::OutOfBounds),
         }
     }
 }
@@ -235,3 +235,105 @@ impl TryFrom<CartridgeType> for Mbc {
         }
     }
 }
+
+// --- UNIT TESTS BEGIN ---
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod mbc0_tests {
+        use super::*;
+
+        #[test]
+        fn test_read() {
+            let mbc0 = Mbc0::default();
+            let addr = 0x2000;
+            let rom = vec![0x99; 1000];
+            let ram = vec![0x69; 1000];
+            let result = mbc0.read(addr, &rom, &ram);
+            assert_eq!(result.unwrap(), OPEN_BUS);
+
+            let mbc0 = Mbc0::default();
+            let addr = 0x0249;
+            let rom = vec![0x24; 1000];
+            let ram = vec![0x81; 1000];
+            let result = mbc0.read(addr, &rom, &ram);
+            assert_eq!(result.unwrap(), 0x24);
+
+            let mbc0 = Mbc0::default();
+            let addr = 0xA1D2;
+            let rom = vec![0xCA; 1000];
+            let ram = vec![0xDF; 1000];
+            let result = mbc0.read(addr, &rom, &ram);
+            assert!(matches!(
+                result,
+                Err(MemoryReadError::RamNotSupported(OPEN_BUS))
+            ));
+
+            let mbc0 = Mbc0::default();
+            let addr = 0xFFD5;
+            let rom = vec![0xEB; 1000];
+            let ram = vec![0x88; 1000];
+            let result = mbc0.read(addr, &rom, &ram);
+            assert!(matches!(
+                result,
+                Err(MemoryReadError::OutOfBounds(OPEN_BUS))
+            ));
+        }
+
+        #[test]
+        fn test_write() {
+            let mut mbc0 = Mbc0::default();
+            let addr = 0x101A;
+            let data = 0xDB;
+            let mut ram = vec![0xAC; 1000];
+            let result = mbc0.write(addr, data, &mut ram);
+            assert!(matches!(result, Err(MemoryWriteError::ReadOnly)));
+
+            let mut mbc0 = Mbc0::default();
+            let addr = 0xAF24;
+            let data = 0x76;
+            let mut ram = vec![0xDD; 1000];
+            let result = mbc0.write(addr, data, &mut ram);
+            assert!(matches!(result, Err(MemoryWriteError::RamNotSupported)));
+
+            let mut mbc0 = Mbc0::default();
+            let addr = 0xF339;
+            let data = 0x92;
+            let mut ram = vec![0xEE; 1000];
+            let result = mbc0.write(addr, data, &mut ram);
+            assert!(matches!(result, Err(MemoryWriteError::OutOfBounds)));
+        }
+    }
+
+    // mod mbc1_tests {
+    //     use super::*;
+    //
+    //     #[test]
+    //     fn test_read() {
+    //         todo!();
+    //     }
+    //
+    //     #[test]
+    //     fn test_write() {
+    //         todo!();
+    //     }
+    // }
+    //
+    // mod mbc_tests {
+    //     use super::*;
+    //
+    //     #[test]
+    //     fn test_read() {
+    //         todo!();
+    //     }
+    //
+    //     #[test]
+    //     fn test_write() {
+    //         todo!();
+    //     }
+    // }
+}
+
+// --- UNIT TESTS END ---
