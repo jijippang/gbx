@@ -816,7 +816,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn test_decode() {
+        fn decode() {
             let mut cpu = GbCpu::default();
             let mmu = GbMmu::default();
             let cartridge = GbCartridge::default();

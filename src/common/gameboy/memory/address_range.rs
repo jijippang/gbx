@@ -374,7 +374,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn test_size() {
+        fn size() {
             let addr_range = AddressRange::Single { addr: 0xFFFF };
             assert_eq!(addr_range.size(), 1);
 
@@ -404,7 +404,7 @@ mod tests {
         }
 
         #[test]
-        fn test_lower() {
+        fn lower() {
             let addr_range = AddressRange::Single { addr: 0xFFFF };
             assert_eq!(addr_range.lower(), 0xFFFF);
 
@@ -434,7 +434,7 @@ mod tests {
         }
 
         #[test]
-        fn test_upper() {
+        fn upper() {
             let addr_range = AddressRange::Single { addr: 0xFFFF };
             assert_eq!(addr_range.upper(), 0xFFFF);
 
@@ -464,7 +464,7 @@ mod tests {
         }
 
         #[test]
-        fn test_contains() {
+        fn contains() {
             let addr_range = AddressRange::Single { addr: 0xFFFF };
             let item = 0xFFFF;
             assert!(addr_range.contains(item));
@@ -509,7 +509,7 @@ mod tests {
         }
 
         #[test]
-        fn test_is_empty() {
+        fn is_empty() {
             let addr_range = AddressRange::Single { addr: 0xFFFF };
             assert!(!addr_range.is_empty());
 
@@ -579,7 +579,7 @@ mod tests {
         }
 
         #[test]
-        fn test_checked_add() {
+        fn checked_add() {
             let addr_range = AddressRange::Single { addr: Address::MAX }.checked_add(0x0002);
             assert!(matches!(addr_range, Err(AddressRangeError::Overflow(_))));
             let addr_range = AddressRange::Single { addr: 0x0420 }.checked_add(0x0002);
@@ -663,7 +663,7 @@ mod tests {
         }
 
         #[test]
-        fn test_checked_sub() {
+        fn checked_sub() {
             let addr_range = AddressRange::Single { addr: Address::MIN }.checked_sub(0x0002);
             assert!(matches!(addr_range, Err(AddressRangeError::Underflow(_))));
             let addr_range = AddressRange::Single { addr: 0x0420 }.checked_sub(0x0002);
