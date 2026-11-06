@@ -1,4 +1,5 @@
 use super::{GbCartridge, GbPpu};
+use crate::cartridge::Cartridge;
 use crate::common::gameboy::memory::common::{Address, Data, OPEN_BUS};
 use std::error::Error;
 use std::fmt;
