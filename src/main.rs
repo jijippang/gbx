@@ -1,3 +1,4 @@
+use cartridge::Cartridge;
 use clap::{Parser, ValueEnum};
 use console::gameboy::GameBoy;
 use console::{Console, ConsoleModel};
@@ -6,6 +7,7 @@ use std::path::PathBuf;
 use tracing::{info, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
 
+mod cartridge;
 mod common;
 mod console;
 mod emulator;
@@ -81,6 +83,8 @@ fn main() {
     info!("Starting GBX Emulator");
     info!("Log Level Filter: {}", log_level_filter);
 
+    let cartridge = Cartridge::new(args.rom_path).unwrap();
+    // TODO: Find a better way to handle the console creation
     let mut console = match args.console_model {
         ConsoleModel::GameBoy => GameBoy::default(),
         // ConsoleModel::GameBoyColor => GameBoyColor::default(),
@@ -90,7 +94,7 @@ fn main() {
             args.console_model
         ),
     };
-    console.load_cartridge(&args.rom_path).unwrap();
+    console.load_cartridge(cartridge);
 
     let mut emulator = Emulator::new(console, EmulatorSpeed::Preset(EmulatorSpeedPreset::Normal));
     // let mut emulator = Emulator::new(console, EmulatorSpeed::Custom(4.0));

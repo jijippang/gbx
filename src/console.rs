@@ -1,7 +1,5 @@
+use crate::cartridge::Cartridge;
 use clap::ValueEnum;
-use std::io;
-use std::ops::RangeInclusive;
-use std::path::Path;
 
 pub mod gameboy;
 
@@ -16,11 +14,12 @@ pub enum ConsoleModel {
 pub trait Console {
     const CONSOLE_MASTER_CLK_FREQ: f64;
     const CONSOLE_FPS: f64;
-    const CONSOLE_CART_SIZE_RANGE: RangeInclusive<usize>;
+
+    type Cartridge: Cartridge;
 
     fn step(&mut self, cycles: u64);
     fn get_video_buffer(&self) -> &[u8];
-    fn load_cartridge(&mut self, file_path: impl AsRef<Path>) -> Result<(), io::Error>;
+    fn load_cartridge(&mut self, cartridge: Self::Cartridge);
     fn get_cycles_per_frame() -> u64 {
         (Self::CONSOLE_MASTER_CLK_FREQ / Self::CONSOLE_FPS).round() as u64
     }
