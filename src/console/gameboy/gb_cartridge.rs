@@ -1,9 +1,11 @@
 use super::gb_mmu::{MemoryReadError, MemoryWriteError};
+use crate::cartridge::Cartridge;
 use crate::common::gameboy::memory::address_range::AddressRange;
 use crate::common::gameboy::memory::common::{Address, Data};
 use mbc::Mbc;
-use std::{fmt, ops::RangeInclusive};
-use tracing::info;
+use std::path::{Path, PathBuf};
+use std::{fmt, fs, ops::RangeInclusive};
+use tracing::{info, warn};
 
 mod mbc;
 
@@ -1017,6 +1019,7 @@ impl Default for CartridgeHeader {
 
 #[derive(Debug, Default)]
 pub struct GbCartridge {
+    source_path: PathBuf,
     header: CartridgeHeader,
     rom: Vec<Data>,
     ram: Vec<Data>,
@@ -1033,16 +1036,46 @@ impl GbCartridge {
     }
 }
 
-impl TryFrom<Vec<Data>> for GbCartridge {
-    type Error = String;
+impl Cartridge for GbCartridge {
+    // [32 KiB, 8 MiB]
+    const CARTRIDGE_SIZE_RANGE: RangeInclusive<usize> = 0x8000..=0x800000;
+    const CARTRIDGE_PAD_VAL: u8 = 0xFF;
 
-    fn try_from(value: Vec<Data>) -> Result<Self, Self::Error> {
-        let header: CartridgeHeader = value
+    fn new(source_path: impl AsRef<Path>) -> Result<Self, String> {
+        info!(
+            "Attempting to create cartridge from: {}",
+            source_path.as_ref().display()
+        );
+        let mut cartridge_data = fs::read(&source_path).map_err(|err| err.to_string())?;
+
+        // Validate cartridge size
+        let cartridge_data_len = cartridge_data.len();
+        if !Self::CARTRIDGE_SIZE_RANGE.contains(&cartridge_data_len) {
+            return Err(format!(
+                "Cartridge size: {} [bytes], does not fit within the allowed cartridge size range: {:?}",
+                cartridge_data_len,
+                Self::CARTRIDGE_SIZE_RANGE
+            ));
+        } else {
+            // If the cartridge is not a power of 2, pad to the nearest power of 2 with CART_PAD_VAL
+            let target_size = cartridge_data_len.next_power_of_two();
+            if cartridge_data_len != target_size {
+                warn!(
+                    "Cartridge size: {} [bytes] is not a power of 2, padding to {} [bytes] with value: {:#X}",
+                    cartridge_data_len,
+                    target_size,
+                    Self::CARTRIDGE_PAD_VAL
+                );
+                cartridge_data.resize(target_size, Self::CARTRIDGE_PAD_VAL);
+            }
+        }
+
+        let header: CartridgeHeader = cartridge_data
             .get(0x0100..=0x014F)
             .unwrap_or_else(|| {
                 panic!(
-                    "Cartridge size: {} [bytes], does not allow parsing of cartridge header",
-                    value.len()
+                    "Cartridge size: {} [bytes], does not allow parsing of the cartridge header",
+                    cartridge_data.len()
                 )
             })
             .into();
@@ -1051,10 +1084,15 @@ impl TryFrom<Vec<Data>> for GbCartridge {
         let mbc: Mbc = header.cartridge_type.try_into()?;
 
         Ok(Self {
+            source_path: source_path.as_ref().to_path_buf(),
             header: header,
-            rom: value,
+            rom: cartridge_data,
             ram: ram,
             mbc: mbc,
         })
+    }
+
+    fn source_path(&self) -> &Path {
+        &self.source_path
     }
 }
