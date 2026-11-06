@@ -1026,20 +1026,15 @@ pub struct GbCartridge {
     mbc: Mbc,
 }
 
-impl GbCartridge {
-    pub fn read(&self, addr: Address) -> Result<Data, MemoryReadError> {
-        self.mbc.read(addr, &self.rom, &self.ram)
-    }
-
-    pub fn write(&mut self, addr: Address, data: Data) -> Result<(), MemoryWriteError> {
-        self.mbc.write(addr, data, &mut self.ram)
-    }
-}
-
 impl Cartridge for GbCartridge {
     // [32 KiB, 8 MiB]
     const CARTRIDGE_SIZE_RANGE: RangeInclusive<usize> = 0x8000..=0x800000;
-    const CARTRIDGE_PAD_VAL: u8 = 0xFF;
+    const CARTRIDGE_PAD_VAL: Self::Data = 0xFF;
+
+    type Address = Address;
+    type Data = Data;
+    type ReadError = MemoryReadError;
+    type WriteError = MemoryWriteError;
 
     fn new(source_path: impl AsRef<Path>) -> Result<Self, String> {
         info!(
@@ -1090,6 +1085,14 @@ impl Cartridge for GbCartridge {
             ram: ram,
             mbc: mbc,
         })
+    }
+
+    fn read(&self, addr: Self::Address) -> Result<Self::Data, Self::ReadError> {
+        self.mbc.read(addr, &self.rom, &self.ram)
+    }
+
+    fn write(&mut self, addr: Self::Address, data: Self::Data) -> Result<(), Self::WriteError> {
+        self.mbc.write(addr, data, &mut self.ram)
     }
 
     fn source_path(&self) -> &Path {
