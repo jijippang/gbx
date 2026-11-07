@@ -31,7 +31,7 @@ impl Mbc0 {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq)]
 enum Mbc1Mode {
     #[default]
     // [0x0000, 0x3FFF] and [0xA000, 0xBFFF] are locked to bank 0 of ROM and SRAM respectively
@@ -307,20 +307,253 @@ mod tests {
         }
     }
 
-    // mod mbc1_tests {
-    //     use super::*;
-    //
-    //     #[test]
-    //     fn read() {
-    //         todo!();
-    //     }
-    //
-    //     #[test]
-    //     fn write() {
-    //         todo!();
-    //     }
-    // }
-    //
+    mod mbc1_tests {
+        use super::*;
+
+        #[test]
+        fn read() {
+            // rom bank 0, simple mode
+            let mbc1 = Mbc1 {
+                mode: Mbc1Mode::Simple,
+                ..Default::default()
+            };
+            let addr = 0x2000;
+            let rom = vec![0x99; 1000];
+            let ram = vec![0x69; 1000];
+            let result = mbc1.read(addr, &rom, &ram);
+            assert_eq!(result.unwrap(), 0x99);
+
+            // rom bank 0, advanced mode
+            let mbc1 = Mbc1 {
+                mode: Mbc1Mode::Advanced,
+                ram_bank: 1,
+                ..Default::default()
+            };
+            let addr = 0x2000;
+            let mut rom = vec![0x99; 1000];
+            rom[480] = 0xE2;
+            let ram = vec![0x69; 1000];
+            let result = mbc1.read(addr, &rom, &ram);
+            assert_eq!(result.unwrap(), 0xE2);
+
+            // switchable rom banks
+            let mbc1 = Mbc1 {
+                rom_bank: 0,
+                ram_bank: 2,
+                ..Default::default()
+            };
+            let addr = 0x5900;
+            let mut rom = vec![0x99; 1000];
+            rom[360] = 0xD7;
+            let ram = vec![0x69; 1000];
+            let result = mbc1.read(addr, &rom, &ram);
+            assert_eq!(result.unwrap(), 0xD7);
+
+            // switchable ram banks, ram not enabled
+            let mbc1 = Mbc1 {
+                ram_bank: 2,
+                ram_enable: false,
+                mode: Mbc1Mode::Simple,
+                ..Default::default()
+            };
+            let addr = 0xB929;
+            let rom = vec![0x99; 1000];
+            let ram = vec![0x69; 1000];
+            let result = mbc1.read(addr, &rom, &ram);
+            assert!(matches!(
+                result,
+                Err(MemoryReadError::RamNotSupported(OPEN_BUS))
+            ));
+
+            // switchable ram banks, ram empty
+            let mbc1 = Mbc1 {
+                ram_bank: 2,
+                ram_enable: true,
+                mode: Mbc1Mode::Simple,
+                ..Default::default()
+            };
+            let addr = 0xB929;
+            let rom = vec![0x99; 1000];
+            let ram = vec![];
+            let result = mbc1.read(addr, &rom, &ram);
+            assert!(matches!(
+                result,
+                Err(MemoryReadError::RamNotSupported(OPEN_BUS))
+            ));
+
+            // switchable ram banks, simple mode
+            let mbc1 = Mbc1 {
+                ram_bank: 2,
+                ram_enable: true,
+                mode: Mbc1Mode::Simple,
+                ..Default::default()
+            };
+            let addr = 0xB929;
+            let rom = vec![0x99; 1000];
+            let mut ram = vec![0x69; 1000];
+            ram[441] = 0xCD;
+            let result = mbc1.read(addr, &rom, &ram);
+            assert_eq!(result.unwrap(), 0xCD);
+
+            // switchable ram banks, advanced mode
+            let mbc1 = Mbc1 {
+                ram_bank: 4,
+                ram_enable: true,
+                mode: Mbc1Mode::Advanced,
+                ..Default::default()
+            };
+            let addr = 0xB929;
+            let rom = vec![0x99; 1000];
+            let mut ram = vec![0x69; 1000];
+            ram[209] = 0xCD;
+            let result = mbc1.read(addr, &rom, &ram);
+            assert_eq!(result.unwrap(), 0xCD);
+
+            // out of bounds
+            let mbc1 = Mbc1::default();
+            let addr = 0xEE92;
+            let rom = vec![0x99; 1000];
+            let ram = vec![0x69; 1000];
+            let result = mbc1.read(addr, &rom, &ram);
+            assert!(matches!(
+                result,
+                Err(MemoryReadError::OutOfBounds(OPEN_BUS))
+            ));
+        }
+
+        #[test]
+        fn write() {
+            // ram enable register, enable
+            let mut mbc1 = Mbc1 {
+                ram_enable: false,
+                ..Default::default()
+            };
+            let addr = 0x0ACD;
+            let data = 0xDA;
+            let mut ram = vec![0x69; 1000];
+            let result = mbc1.write(addr, data, &mut ram);
+            assert!(matches!(result, Ok(())));
+            assert!(mbc1.ram_enable);
+
+            // ram enable register, disable
+            let mut mbc1 = Mbc1 {
+                ram_enable: true,
+                ..Default::default()
+            };
+            let addr = 0x0ACD;
+            let data = 0xD2;
+            let mut ram = vec![0x69; 1000];
+            let result = mbc1.write(addr, data, &mut ram);
+            assert!(matches!(result, Ok(())));
+            assert!(!mbc1.ram_enable);
+
+            // rom bank register, handle bank = 0
+            let mut mbc1 = Mbc1::default();
+            let addr = 0x2394;
+            let data = 0x00;
+            let mut ram = vec![0x69; 1000];
+            let result = mbc1.write(addr, data, &mut ram);
+            assert!(matches!(result, Ok(())));
+            assert_eq!(mbc1.rom_bank, 1);
+
+            // rom bank register, handle bank != 0
+            let mut mbc1 = Mbc1::default();
+            let addr = 0x2394;
+            let data = 0x9D;
+            let mut ram = vec![0x69; 1000];
+            let result = mbc1.write(addr, data, &mut ram);
+            assert!(matches!(result, Ok(())));
+            assert_eq!(mbc1.rom_bank, 29);
+
+            // ram bank register
+            let mut mbc1 = Mbc1::default();
+            let addr = 0x449A;
+            let data = 0x3E;
+            let mut ram = vec![0x69; 1000];
+            let result = mbc1.write(addr, data, &mut ram);
+            assert!(matches!(result, Ok(())));
+            assert_eq!(mbc1.ram_bank, 2);
+
+            // mode register, simple mode
+            let mut mbc1 = Mbc1::default();
+            let addr = 0x7BBA;
+            let data = 0x3E;
+            let mut ram = vec![0x69; 1000];
+            let result = mbc1.write(addr, data, &mut ram);
+            assert!(matches!(result, Ok(())));
+            assert_eq!(mbc1.mode, Mbc1Mode::Simple);
+
+            // mode register, advanced mode
+            let mut mbc1 = Mbc1::default();
+            let addr = 0x7BBA;
+            let data = 0xF5;
+            let mut ram = vec![0x69; 1000];
+            let result = mbc1.write(addr, data, &mut ram);
+            assert!(matches!(result, Ok(())));
+            assert_eq!(mbc1.mode, Mbc1Mode::Advanced);
+
+            // ram, not enabled
+            let mut mbc1 = Mbc1 {
+                ram_enable: false,
+                ..Default::default()
+            };
+            let addr = 0xBEEF;
+            let data = 0xCF;
+            let mut ram = vec![0x69; 1000];
+            let result = mbc1.write(addr, data, &mut ram);
+            assert!(matches!(result, Err(MemoryWriteError::RamNotSupported)));
+
+            // ram, empty
+            let mut mbc1 = Mbc1 {
+                ram_enable: true,
+                ..Default::default()
+            };
+            let addr = 0xBEEF;
+            let data = 0xCF;
+            let mut ram = vec![];
+            let result = mbc1.write(addr, data, &mut ram);
+            assert!(matches!(result, Err(MemoryWriteError::RamNotSupported)));
+
+            // ram, simple mode
+            let mut mbc1 = Mbc1 {
+                ram_enable: true,
+                mode: Mbc1Mode::Simple,
+                ..Default::default()
+            };
+            let addr = 0xBEEF;
+            let data = 0xCF;
+            let mut ram = vec![0x69; 1000];
+            let result = mbc1.write(addr, data, &mut ram);
+            assert!(matches!(result, Ok(())));
+            assert_eq!(ram[0x0397], data);
+
+            // ram, advanced mode
+            let mut mbc1 = Mbc1 {
+                ram_bank: 4,
+                ram_enable: true,
+                mode: Mbc1Mode::Advanced,
+                ..Default::default()
+            };
+            let addr = 0xBEEF;
+            let data = 0xCF;
+            let mut ram = vec![0x69; 1000];
+            let result = mbc1.write(addr, data, &mut ram);
+            assert!(matches!(result, Ok(())));
+            assert_eq!(ram[0x02AF], data);
+
+            // out of bounds
+            let mut mbc1 = Mbc1 {
+                ram_enable: true,
+                ..Default::default()
+            };
+            let addr = 0xEEAF;
+            let data = 0xCF;
+            let mut ram = vec![0x69; 1000];
+            let result = mbc1.write(addr, data, &mut ram);
+            assert!(matches!(result, Err(MemoryWriteError::OutOfBounds)));
+        }
+    }
+
     // mod mbc_tests {
     //     use super::*;
     //
