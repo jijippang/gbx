@@ -3,9 +3,11 @@ use clap::{Parser, ValueEnum};
 use console::gameboy::GameBoy;
 use console::{Console, ConsoleModel};
 use emulator::{Emulator, EmulatorSpeed, EmulatorSpeedPreset};
+use std::fs::File;
 use std::path::PathBuf;
 use tracing::{info, level_filters::LevelFilter};
-use tracing_subscriber::EnvFilter;
+use tracing_appender::non_blocking::WorkerGuard;
+use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
 mod cartridge;
 mod common;
@@ -49,6 +51,44 @@ impl From<LevelFilter> for LogLevelFilter {
     }
 }
 
+fn init_tracing(
+    log_level_filter: LogLevelFilter,
+    log_dir_path: Option<PathBuf>,
+) -> Option<WorkerGuard> {
+    let log_level_filter = LevelFilter::from(log_level_filter);
+
+    let filter = EnvFilter::default().add_directive(log_level_filter.into());
+
+    let console_layer = fmt::layer().with_writer(std::io::stdout);
+
+    const LOG_FILE_PREFIX: &str = "gbx";
+    const LOG_FILE_SUFFIX: &str = "log";
+    let (file_layer, guard) = if let Some(path) = log_dir_path {
+        let path = path.join(format!("{}.{}", LOG_FILE_PREFIX, LOG_FILE_SUFFIX));
+        let file = File::create(path).expect("Failed to create log file");
+
+        let (non_blocking, guard) = tracing_appender::non_blocking(file);
+        let file_layer = fmt::layer().with_writer(non_blocking).with_ansi(false);
+
+        (Some(file_layer), Some(guard))
+    } else {
+        (None, None)
+    };
+
+    tracing_subscriber::registry()
+        .with(filter)
+        .with(console_layer)
+        .with(file_layer)
+        .init();
+
+    info!(
+        "Tracing initialized with log level filter: {}",
+        log_level_filter
+    );
+
+    guard
+}
+
 #[derive(Parser, Debug)]
 #[command(version, name = "gbx", about = "Emulator for the Game Boy family")]
 struct Args {
@@ -66,22 +106,16 @@ struct Args {
 
     /// Path to the log directory where logs are written to
     #[arg(short = 'p', long)]
-    log_path: Option<PathBuf>,
+    log_dir_path: Option<PathBuf>,
 }
 
 fn main() {
     let args = Args::parse();
-    // println!("rom_path: {:?}", args.rom_path);
-    // println!("console_model: {:?}", args.console_model);
 
     // Initialize logging through tracing
-    let log_level_filter = LevelFilter::from(args.log_level_filter);
-    let filter = EnvFilter::default().add_directive(log_level_filter.into());
-
-    tracing_subscriber::fmt().with_env_filter(filter).init();
+    let _guard = init_tracing(args.log_level_filter, args.log_dir_path);
 
     info!("Starting GBX Emulator");
-    info!("Log Level Filter: {}", log_level_filter);
 
     let cartridge = Cartridge::new(args.rom_path).unwrap();
     // TODO: Find a better way to handle the console creation
@@ -90,7 +124,7 @@ fn main() {
         // ConsoleModel::GameBoyColor => GameBoyColor::default(),
         // ConsoleModel::GameBoyAdvance => GameBoyAdvance::default(),
         _ => panic!(
-            "Console Model: {:?}, is not yet supported",
+            "Console Model: {:?} is not yet supported",
             args.console_model
         ),
     };

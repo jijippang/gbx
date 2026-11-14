@@ -1,5 +1,5 @@
 use crate::console::Console;
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 type SpeedMultiplier = f64;
 
@@ -86,6 +86,11 @@ impl<C: Console> Emulator<C> {
         let cycles_per_frame = ((C::get_cycles_per_frame() as SpeedMultiplier)
             * self.emu_speed.to_speed_mult())
         .round() as u64;
+        debug!(
+            "Stepping the console by {} cycles for this frame",
+            cycles_per_frame
+        );
+
         self.console.step(cycles_per_frame);
         // self.generate_frame();
         // self.handle_input();

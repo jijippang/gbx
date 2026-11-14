@@ -5,7 +5,7 @@ use gb_cartridge::GbCartridge;
 use gb_cpu::GbCpu;
 use gb_mmu::GbMmu;
 use gb_ppu::GbPpu;
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 mod gb_apu;
 mod gb_cartridge;
@@ -66,6 +66,7 @@ impl Console for GameBoy {
     }
 
     fn load_cartridge(&mut self, cartridge: Self::Cartridge) {
+        debug!("Loading cartridge");
         self.cartridge = cartridge
     }
 }

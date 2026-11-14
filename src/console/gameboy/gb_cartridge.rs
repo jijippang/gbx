@@ -5,7 +5,7 @@ use crate::common::gameboy::memory::common::{Address, Data};
 use mbc::Mbc;
 use std::path::{Path, PathBuf};
 use std::{fmt, fs, ops::RangeInclusive};
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 mod mbc;
 
@@ -1074,7 +1074,7 @@ impl Cartridge for GbCartridge {
                 )
             })
             .into();
-        info!("{}", header);
+        debug!("{}", header);
         let ram: Vec<Data> = vec![0; header.ram_size.into()];
         let mbc: Mbc = header.cartridge_type.try_into()?;
 

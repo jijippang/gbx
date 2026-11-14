@@ -4,7 +4,7 @@ use super::gb_ppu::GbPpu;
 use crate::common::gameboy::cpu::common::TCycle;
 use crate::common::gameboy::memory::common::{Address, Data};
 use instruction::Instruction;
-use tracing::{error, info, warn};
+use tracing::{error, info, trace, warn};
 
 mod instruction;
 
@@ -319,15 +319,19 @@ impl GbCpu {
     }
 
     fn fetch(&mut self, mmu: &GbMmu, cartridge: &GbCartridge, ppu: &GbPpu) -> Data {
-        let data = mmu.read(self.pc, cartridge, ppu);
+        let data = mmu
+            .read(self.pc, cartridge, ppu)
+            .unwrap_or_else(|err| err.into());
+        trace!("Fetched data: {:#X}", data);
         self.pc = self.pc.wrapping_add(1);
-        data.unwrap_or_else(|err| err.into())
+        data
     }
 
     #[inline]
     fn execute(&mut self, instr: Instruction) -> TCycle {
         // The instruction should already contain both the opcode and any operands
         // And then at this point we can do some kind of function dispatch to execute the instruction
+        trace!("Executing instruction: {:?}", instr);
         match instr {
             Instruction::LdR8FromR8 { dst, src } => {
                 if dst != src {

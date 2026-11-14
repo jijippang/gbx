@@ -3,6 +3,9 @@
 # Rust
 /target
 
+# Logs
+/logs
+
 # ROMs
 /roms
 
